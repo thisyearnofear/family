@@ -28,7 +28,9 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
   return (
     <>
       <Head>
-        <title> 2024 Commemoration Gallery</title>
+        <title>2024 Commemoration Gallery</title>
+        <meta property="og:image" content="/public/leafless.png" />
+        <meta name="twitter:image" content="/public/leafless.png" />
       </Head>
       <main className="mx-auto max-w-[1960px] p-4">
         {photoId && (
@@ -60,7 +62,7 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
               2024 Commemoration Gallery
             </h1>
             <p className="max-w-[40ch] text-white/75 sm:max-w-[32ch]">
-              A gallery to comemorate my family and friends. Celebrating
+              A gallery to commemorate my family and friends. Celebrating
               milestones, memories, and connections that shaped our lives.
             </p>
           </div>
@@ -74,7 +76,7 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
               className="after:content group relative mb-5 block w-full cursor-zoom-in after:pointer-events-none after:absolute after:inset-0 after:rounded-lg after:shadow-highlight"
             >
               <Image
-                alt="Next.js Conf photo"
+                alt="Failed To Load"
                 className="transform rounded-lg brightness-90 transition will-change-auto group-hover:brightness-110"
                 style={{ transform: "translate3d(0, 0, 0)" }}
                 placeholder="blur"
