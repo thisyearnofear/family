@@ -4,8 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useRef } from "react";
-import Bridge from "../components/Icons/Bridge";
-import Logo from "../components/Icons/Logo";
 import Modal from "../components/Modal";
 import cloudinary from "../utils/cloudinary";
 import getBase64ImageUrl from "../utils/generateBlurPlaceholder";
@@ -102,7 +100,7 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
         >
           Andrei Sager
         </a>{" "}
-        @ 2024 •{" "}
+        @ 2024 •{"     "}
         <a
           href="https://vercel.com/templates"
           target="_blank"
