@@ -100,15 +100,34 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
         >
           Andrei Sager
         </a>{" "}
-        @ 2024 •{"     "}
+        @ 2024 • Built with{" "}
         <a
-          href="https://vercel.com/templates"
+          href="https://nextjs.org/"
           target="_blank"
           className="font-semibold hover:text-white"
           rel="noreferrer"
         >
-          Powered by Next.js
+          Next.js
         </a>
+        ,{" "}
+        <a
+          href="https://vercel.com/"
+          target="_blank"
+          className="font-semibold hover:text-white"
+          rel="noreferrer"
+        >
+          Vercel
+        </a>
+        ,{" "}
+        <a
+          href="https://cloudinary.com/"
+          target="_blank"
+          className="font-semibold hover:text-white"
+          rel="noreferrer"
+        >
+          Cloudinary
+        </a>
+        .
       </footer>
     </>
   );
