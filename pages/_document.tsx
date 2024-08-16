@@ -13,6 +13,10 @@ class MyDocument extends Document {
           />
 
           <meta
+            property="og:url"
+            content="https://commemorationgallery.vercel.app"
+          />
+          <meta
             property="og:site_name"
             content="commemorationgallery.vercel.app"
           />
