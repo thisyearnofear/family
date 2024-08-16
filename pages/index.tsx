@@ -27,11 +27,6 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
 
   return (
     <>
-      <Head>
-        <title>2024 Commemoration Gallery</title>
-        <meta property="og:image" content="/public/leafless.png" />
-        <meta name="twitter:image" content="/public/leafless.png" />
-      </Head>
       <main className="mx-auto max-w-[1960px] p-4">
         {photoId && (
           <Modal
