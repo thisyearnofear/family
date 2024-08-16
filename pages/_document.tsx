@@ -12,7 +12,6 @@ class MyDocument extends Document {
             key="desc"
           />
 
-          <meta name="og:url" content="commemorationgallery.vercel.app" />
           <meta name="og:site_name" content="commemorationgallery.vercel.app" />
           <meta name="og:title" content="2024 Commemoration Gallery. " />
           <meta
