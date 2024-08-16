@@ -29,7 +29,7 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
     <>
       <Head>
         <title>2024 Commemoration Gallery</title>
-        <meta name="og:image" content="/baby-aldrei.jpg" />
+        <meta property="og:image" content="/baby-aldrei.jpg" />
         <meta name="twitter:image" content="/baby-aldrei.jpg" />
       </Head>
       <main className="mx-auto max-w-[1960px] p-4">

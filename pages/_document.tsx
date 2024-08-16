@@ -12,10 +12,13 @@ class MyDocument extends Document {
             key="desc"
           />
 
-          <meta name="og:site_name" content="commemorationgallery.vercel.app" />
-          <meta name="og:title" content="2024 Commemoration Gallery. " />
           <meta
-            name="og:description"
+            property="og:site_name"
+            content="commemorationgallery.vercel.app"
+          />
+          <meta property="og:title" content="2024 Commemoration Gallery. " />
+          <meta
+            property="og:description"
             content="A gallery to commemorate my family and friends."
           />
 
