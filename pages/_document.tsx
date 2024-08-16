@@ -5,7 +5,6 @@ class MyDocument extends Document {
     return (
       <Html lang="en">
         <Head>
-          <title>2024 Commemoration Gallery</title>
           <link rel="icon" href="/favicon.ico" />
           <meta
             name="description"
@@ -13,16 +12,13 @@ class MyDocument extends Document {
             key="desc"
           />
 
+          <meta name="og:url" content="commemorationgallery.vercel.app" />
+          <meta name="og:site_name" content="commemorationgallery.vercel.app" />
+          <meta name="og:title" content="2024 Commemoration Gallery. " />
           <meta
-            property="og:site_name"
-            content="commemorationgallery.vercel.app"
-          />
-          <meta property="og:title" content="2024 Commemoration Gallery. " />
-          <meta
-            property="og:description"
+            name="og:description"
             content="A gallery to commemorate my family and friends."
           />
-          <meta property="og:image" content="/baby-aldrei.jpg" />
 
           <meta name="twitter:card" content="summary_large_image" />
           <meta name="twitter:title" content="2024 Commemoration Gallery. " />
@@ -30,7 +26,6 @@ class MyDocument extends Document {
             name="twitter:description"
             content="A gallery to commemorate my family and friends."
           />
-          <meta name="twitter:image" content="/baby-aldrei.jpg" />
         </Head>
         <body className="bg-black antialiased">
           <Main />
