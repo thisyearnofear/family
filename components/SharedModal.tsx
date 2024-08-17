@@ -74,10 +74,10 @@ export default function SharedModal({
                 <Image
                   src={`https://res.cloudinary.com/${
                     process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-                  }/image/upload/if_ar_lt_1:1/c_pad,b_black,h_1920,${
-                    navigation ? "w_853" : "w_1280"
-                  }/if_else,b_black,c_pad,w_1280,${
-                    navigation ? "h_1920" : "h_1920"
+                  }/image/upload/${
+                    isBreakpoint
+                      ? "if_ar_lt_1:1/c_pad,b_black,h_1920,w_853/if_else,b_black,c_pad,w_1280,h_1920"
+                      : "if_ar_gt_1:1/c_pad,b_black,h_1280,w_1280/if_else,b_black,c_pad,h_1280,w_1920"
                   }/${currentImage.public_id}.${currentImage.format}`}
                   width={navigation ? 1280 : 1920}
                   height={navigation ? 853 : 1280}
@@ -85,13 +85,6 @@ export default function SharedModal({
                   alt="Next.js Conf image"
                   onLoad={() => setLoaded(true)}
                 />
-
-                {/* Saving for later. Desktop query
-                 if_ar_gt_1:1/c_pad,b_black,h_1280,${
-                    navigation ? "w_1280" : "w_1920"
-                  }/if_else,b_black,c_pad,h_1280,${
-                    navigation ? "w_1920" : "w_1280"
-                  } */}
               </motion.div>
             </AnimatePresence>
           </div>
