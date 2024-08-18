@@ -63,7 +63,8 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
             </h1>
             <p className="max-w-[40ch] text-white/75 sm:max-w-[32ch]">
               A gallery to commemorate my family and friends. Celebrating
-              milestones, memories, and connections that shaped our lives.
+              milestones, memories (especially funny ones), and connections that
+              shaped our lives.
             </p>
           </div>
           {images.map(({ id, public_id, format, blurDataUrl }) => (
