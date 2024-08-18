@@ -60,7 +60,7 @@ export default function SharedModal({
       <div className="relative z-50 flex aspect-[3/2] w-full max-w-7xl items-center wide:h-full xl:taller-than-854:h-auto">
         {/* Main image */}
         <div className="w-full overflow-hidden">
-          <div className="relative flex aspect-[2/5] items-center justify-center sm:aspect-[3/2]">
+          <div className="relative flex aspect-[2/5] items-center justify-center md:aspect-[3/2]">
             <AnimatePresence initial={false} custom={direction}>
               <motion.div
                 key={index}
@@ -76,7 +76,7 @@ export default function SharedModal({
                     process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
                   }/image/upload/${
                     isBreakpoint
-                      ? "if_ar_lt_1:1/c_pad,b_black,h_1920,w_853/if_else,b_black,c_pad,w_1280,h_1920"
+                      ? `if_ar_lt_1:1/c_pad,b_black,h_1920,w_853/if_else,b_black,c_pad,w_1280,h_1920`
                       : "if_ar_gt_1:1/c_pad,b_black,h_1280,w_1280/if_else,b_black,c_pad,h_1280,w_1920"
                   }/${currentImage.public_id}.${currentImage.format}`}
                   width={navigation ? 1280 : 1920}
@@ -94,7 +94,7 @@ export default function SharedModal({
         <div className="absolute inset-0 mx-auto flex max-w-7xl items-center justify-center">
           {/* Buttons */}
           {loaded && (
-            <div className="relative aspect-[2/3.5] max-h-full w-full sm:aspect-[3/2]">
+            <div className="relative aspect-[2/3.5] max-h-full w-full md:aspect-[3/2]">
               {navigation && (
                 <>
                   {index > 0 && (
@@ -168,7 +168,7 @@ export default function SharedModal({
           )}
           {/* Bottom Nav bar */}
           {navigation && (
-            <div className="fixed inset-x-0 bottom-0 z-40 hidden overflow-hidden bg-gradient-to-b from-black/0 to-black/60 sm:flex">
+            <div className="fixed inset-x-0 bottom-0 z-40 hidden overflow-hidden bg-gradient-to-b from-black/0 to-black/60 md:flex">
               <motion.div
                 initial={false}
                 className="mx-auto mb-6 mt-6 flex aspect-[3/2] h-14"
