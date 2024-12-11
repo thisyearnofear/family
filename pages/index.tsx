@@ -65,6 +65,10 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
               A gallery to commemorate my family and friends. Celebrating
               milestones, memories (especially funny ones), and connections that
               shaped our lives.
+              <br />
+              <br />
+              The most important things in life are relationships, experiences,
+              and memories.
             </p>
           </div>
           {images.map(({ id, public_id, format, blurDataUrl }) => (
