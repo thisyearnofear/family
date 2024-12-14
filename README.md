@@ -9,7 +9,7 @@ My goal was to simulate a professional work environment.
 ## How To Navigate This Project
 
 - Responsive components using tailwind.
-- Responsive carousel item based on orientation using Cloudinary API.
+- Fetches items applying orientation transformation using Cloudinary API. Responsive on both the gallery and carousel view.
 
 ## Why I Built This Project This Way
 
