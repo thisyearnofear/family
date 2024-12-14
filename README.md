@@ -32,3 +32,14 @@ I set myself the goal of creating a presentable gallery website within a 1-week 
 3. Set up your Cloudinary API configuration and your environment variables
 4. Run ```npx install```
 5. Run ```npx run dev```
+
+### How To Add Images?
+
+You can easily add images by:
+
+1. logging in to your cloudinary account,
+2. go to assets,
+3. then folders,
+4. and drag and drop them as you like.
+
+> login > assets > folders
