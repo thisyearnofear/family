@@ -27,7 +27,7 @@ I set myself the goal of creating a presentable gallery website within a 1-week 
 
 ## Usage
 
-1. Fork this repository.
+1. Fork this repository
 2. Create a [Cloudinary account](https://cloudinary.com/users/register_free)
 3. Set up your Cloudinary API configuration and your environment variables
 4. Run ```npx install```
