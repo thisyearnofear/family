@@ -6,6 +6,11 @@ My goal was to simulate a professional work environment.
 - I worked with tasks on a Kanban board using [Todoist](https://todoist.com/): [Screenshot Of Archived Board](https://github.com/user-attachments/assets/dfe84e7c-9938-4a0a-a72c-e1e5737c891f)
 - I used feature branches and pull requests: [Pull Request Example](https://github.com/user-attachments/assets/6773d4ed-5648-465a-8035-cde7c3028c2d)
 
+## How To Navigate This Project
+
+- Responsive components using tailwind.
+- Responsive carousel item based on orientation using Cloudinary API.
+
 ## Why I Built This Project This Way
 
 I set myself the goal of creating a presentable gallery website within a 1-week timeframe, with the deadline being my grandfather's anniversary.
