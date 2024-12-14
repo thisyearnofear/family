@@ -24,3 +24,11 @@ I set myself the goal of creating a presentable gallery website within a 1-week 
 - Contribute my changes to the starter template as a pull request. <!-- The support for Video items was already broken when I used the template. -->
 - Add authentication with a content management UI to easily add items on the site instead of on Cloudinary. <!-- Use tailwind to create UI and Cloudinary API to manage images -->
 - Mocking Cloudinary http requests using Jest. <!-- To avoid external dependencies -->
+
+## Usage
+
+1. Fork this repository.
+2. Create a [Cloudinary account](https://cloudinary.com/users/register_free)
+3. Set up your Cloudinary API configuration and your environment variables
+4. Run ```npx install```
+5. Run ```npx run dev```
