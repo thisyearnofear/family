@@ -9,7 +9,8 @@ My goal was to simulate a professional work environment.
 ## How To Navigate This Project
 
 - Responsive components using tailwind.
-- Fetches items applying orientation transformation using Cloudinary API. Responsive on both the gallery and carousel view.
+- Fetches items applying orientation transformation using Cloudinary API.
+- Refetches items on breakpoints on carousel view as the Cloudinary API provides horizontal or vertical padding based on orientation on fetch.
 
 ## Why I Built This Project This Way
 
