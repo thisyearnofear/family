@@ -1,12 +1,11 @@
-import type { NextPage } from "next";
+import type { NextPage, GetStaticProps } from "next";
 import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useRef } from "react";
 import Modal from "../components/Modal";
-import cloudinary from "../utils/cloudinary";
-import getBase64ImageUrl from "../utils/generateBlurPlaceholder";
+import { getImages, IPFSImage } from "../utils/pinata";
 import type { ImageProps } from "../utils/types";
 import { useLastViewedPhoto } from "../utils/useLastViewedPhoto";
 
@@ -71,7 +70,7 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
               and memories.
             </p>
           </div>
-          {images.map(({ id, public_id, format, blurDataUrl }) => (
+          {images.map(({ id, ipfsHash, name }) => (
             <Link
               key={id}
               href={`/?photoId=${id}`}
@@ -81,12 +80,10 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
               className="after:content group relative mb-5 block w-full cursor-zoom-in after:pointer-events-none after:absolute after:inset-0 after:rounded-lg after:shadow-highlight"
             >
               <Image
-                alt="Failed To Load"
+                alt={name}
                 className="transform rounded-lg brightness-90 transition will-change-auto group-hover:brightness-110"
                 style={{ transform: "translate3d(0, 0, 0)" }}
-                placeholder="blur"
-                blurDataURL={blurDataUrl}
-                src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/c_scale,w_720/${public_id}.${format}`}
+                src={`${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${ipfsHash}`}
                 width={720}
                 height={480}
                 sizes="(max-width: 640px) 100vw,
@@ -140,40 +137,24 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
   );
 };
 
-export default Home;
+export const getStaticProps: GetStaticProps = async () => {
+  const images = await getImages();
 
-export async function getStaticProps() {
-  const results = await cloudinary.v2.search
-    .expression(`folder:${process.env.CLOUDINARY_FOLDER}/*`)
-    .sort_by("public_id", "desc")
-    .max_results(400)
-    .execute();
-  let reducedResults: ImageProps[] = [];
-
-  let i = 0;
-  for (let result of results.resources) {
-    reducedResults.push({
-      id: i,
-      height: result.height,
-      width: result.width,
-      public_id: result.public_id,
-      format: result.format,
-    });
-    i++;
-  }
-
-  const blurImagePromises = results.resources.map((image: ImageProps) => {
-    return getBase64ImageUrl(image);
-  });
-  const imagesWithBlurDataUrls = await Promise.all(blurImagePromises);
-
-  for (let i = 0; i < reducedResults.length; i++) {
-    reducedResults[i].blurDataUrl = imagesWithBlurDataUrls[i];
-  }
+  // Convert IPFSImage to ImageProps
+  const convertedImages: ImageProps[] = images.map((img) => ({
+    id: img.id,
+    height: img.height,
+    width: img.width,
+    ipfsHash: img.ipfsHash,
+    name: img.name,
+  }));
 
   return {
     props: {
-      images: reducedResults,
+      images: convertedImages,
     },
+    revalidate: 60,
   };
-}
+};
+
+export default Home;

@@ -1,13 +1,6 @@
 module.exports = {
   images: {
+    domains: ["gateway.pinata.cloud"],
     formats: ["image/avif", "image/webp"],
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "res.cloudinary.com",
-        port: "",
-        pathname: "/descustyf/**",
-      },
-    ],
   },
 };

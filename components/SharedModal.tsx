@@ -50,6 +50,19 @@ export default function SharedModal({
 
   const isBreakpoint = useMediaQuery(768);
 
+  const getImageSrc = (image: ImageProps) => {
+    if (image.ipfsHash) {
+      return `${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${image.ipfsHash}`;
+    }
+    return `https://res.cloudinary.com/${
+      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+    }/image/upload/${
+      isBreakpoint
+        ? `if_ar_lt_1:1/c_pad,b_black,h_1920,w_853/if_else,b_black,c_pad,w_1280,h_1920`
+        : "if_ar_gt_1:1/c_pad,b_black,h_1280,w_1280/if_else,b_black,c_pad,h_1280,w_1920"
+    }/${image.public_id}.${image.format}`;
+  };
+
   return (
     <MotionConfig
       transition={{
@@ -72,17 +85,11 @@ export default function SharedModal({
                 className="absolute"
               >
                 <Image
-                  src={`https://res.cloudinary.com/${
-                    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-                  }/image/upload/${
-                    isBreakpoint
-                      ? `if_ar_lt_1:1/c_pad,b_black,h_1920,w_853/if_else,b_black,c_pad,w_1280,h_1920`
-                      : "if_ar_gt_1:1/c_pad,b_black,h_1280,w_1280/if_else,b_black,c_pad,h_1280,w_1920"
-                  }/${currentImage.public_id}.${currentImage.format}`}
+                  src={getImageSrc(currentImage)}
                   width={navigation ? 1280 : 1920}
                   height={navigation ? 853 : 1280}
                   priority
-                  alt="Next.js Conf image"
+                  alt={currentImage.name || "Gallery image"}
                   onLoad={() => setLoaded(true)}
                 />
               </motion.div>
