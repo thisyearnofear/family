@@ -1,6 +1,5 @@
 import {
   ArrowDownTrayIcon,
-  ArrowTopRightOnSquareIcon,
   ArrowUturnLeftIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -14,12 +13,10 @@ import { variants } from "../utils/animationVariants";
 import downloadPhoto from "../utils/downloadPhoto";
 import { range } from "../utils/range";
 import type { ImageProps, SharedModalProps } from "../utils/types";
-import Twitter from "./Icons/Twitter";
-import useMediaQuery from "../hooks/MediaQueryHook";
 
 export default function SharedModal({
   index,
-  images,
+  images = [],
   changePhotoId,
   closeModal,
   navigation,
@@ -28,13 +25,14 @@ export default function SharedModal({
 }: SharedModalProps) {
   const [loaded, setLoaded] = useState(false);
 
-  let filteredImages = images?.filter((img: ImageProps) =>
-    range(index - 15, index + 15).includes(img.id)
-  );
+  const filteredImages =
+    images?.filter((img: ImageProps) =>
+      range(index - 15, index + 15).includes(img.id)
+    ) || [];
 
   const handlers = useSwipeable({
     onSwipedLeft: () => {
-      if (index < images?.length - 1) {
+      if (index < images.length - 1) {
         changePhotoId(index + 1);
       }
     },
@@ -46,22 +44,15 @@ export default function SharedModal({
     trackMouse: true,
   });
 
-  let currentImage = images ? images[index] : currentPhoto;
-
-  const isBreakpoint = useMediaQuery(768);
+  const currentImage = images[index] || currentPhoto;
 
   const getImageSrc = (image: ImageProps) => {
-    if (image.ipfsHash) {
-      return `${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${image.ipfsHash}`;
-    }
-    return `https://res.cloudinary.com/${
-      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-    }/image/upload/${
-      isBreakpoint
-        ? `if_ar_lt_1:1/c_pad,b_black,h_1920,w_853/if_else,b_black,c_pad,w_1280,h_1920`
-        : "if_ar_gt_1:1/c_pad,b_black,h_1280,w_1280/if_else,b_black,c_pad,h_1280,w_1920"
-    }/${image.public_id}.${image.format}`;
+    return `${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${image.ipfsHash}`;
   };
+
+  if (!currentImage) {
+    return null;
+  }
 
   return (
     <MotionConfig
@@ -124,37 +115,13 @@ export default function SharedModal({
                   )}
                 </>
               )}
-              <div className="absolute right-0 top-0 flex items-center gap-2 p-3 text-white opacity-70">
-                {navigation ? (
-                  <a
-                    href={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${currentImage.public_id}.${currentImage.format}`}
-                    className="rounded-full bg-black/50 p-2 text-white opacity-100 backdrop-blur-lg transition hover:bg-black/75 hover:text-white"
-                    target="_blank"
-                    title="Open fullsize version"
-                    rel="noreferrer"
-                  >
-                    <ArrowTopRightOnSquareIcon className="h-5 w-5" />
-                  </a>
-                ) : (
-                  <a
-                    href={`https://twitter.com/intent/tweet?text=Check%20out%20this%20pic%20from%20Next.js%20Conf!%0A%0Ahttps://nextjsconf-pics.vercel.app/p/${index}`}
-                    className="rounded-full bg-black/50 p-2 text-white opacity-100 backdrop-blur-lg transition hover:bg-black/75 hover:text-white"
-                    target="_blank"
-                    title="Open fullsize version"
-                    rel="noreferrer"
-                  >
-                    <Twitter className="h-5 w-5" />
-                  </a>
-                )}
+              <div className="absolute right-0 top-0 flex items-center gap-2 p-3 text-white">
                 <button
                   onClick={() =>
-                    downloadPhoto(
-                      `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${currentImage.public_id}.${currentImage.format}`,
-                      `${index}.jpg`
-                    )
+                    downloadPhoto(getImageSrc(currentImage), currentImage.name)
                   }
                   className="rounded-full bg-black/50 p-2 text-white backdrop-blur-lg transition hover:bg-black/75 hover:text-white"
-                  title="Download fullsize version"
+                  title="Download photo"
                 >
                   <ArrowDownTrayIcon className="h-5 w-5" />
                 </button>
@@ -174,45 +141,45 @@ export default function SharedModal({
             </div>
           )}
           {/* Bottom Nav bar */}
-          {navigation && (
+          {navigation && filteredImages.length > 0 && (
             <div className="fixed inset-x-0 bottom-0 z-40 hidden overflow-hidden bg-gradient-to-b from-black/0 to-black/60 md:flex">
               <motion.div
                 initial={false}
                 className="mx-auto mb-6 mt-6 flex aspect-[3/2] h-14"
               >
                 <AnimatePresence initial={false}>
-                  {filteredImages.map(({ public_id, format, id }) => (
+                  {filteredImages.map((image) => (
                     <motion.button
                       initial={{
                         width: "0%",
                         x: `${Math.max((index - 1) * -100, 15 * -100)}%`,
                       }}
                       animate={{
-                        scale: id === index ? 1.25 : 1,
+                        scale: image.id === index ? 1.25 : 1,
                         width: "100%",
                         x: `${Math.max(index * -100, 15 * -100)}%`,
                       }}
                       exit={{ width: "0%" }}
-                      onClick={() => changePhotoId(id)}
-                      key={id}
+                      onClick={() => changePhotoId(image.id)}
+                      key={image.id}
                       className={`${
-                        id === index
+                        image.id === index
                           ? "z-20 rounded-md shadow shadow-black/50"
                           : "z-10"
-                      } ${id === 0 ? "rounded-l-md" : ""} ${
-                        id === images.length - 1 ? "rounded-r-md" : ""
+                      } ${image.id === 0 ? "rounded-l-md" : ""} ${
+                        image.id === images.length - 1 ? "rounded-r-md" : ""
                       } relative inline-block w-full shrink-0 transform-gpu overflow-hidden focus:outline-none`}
                     >
                       <Image
-                        alt="small photos on the bottom"
+                        alt="Gallery thumbnail"
                         width={180}
                         height={120}
                         className={`${
-                          id === index
+                          image.id === index
                             ? "brightness-110 hover:brightness-110"
                             : "brightness-50 contrast-125 hover:brightness-75"
                         } h-full transform object-cover transition`}
-                        src={`https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/c_scale,w_180/${public_id}.${format}`}
+                        src={getImageSrc(image)}
                       />
                     </motion.button>
                   ))}
