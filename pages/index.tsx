@@ -5,11 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useRef } from "react";
 import Modal from "../components/Modal";
-import { getImages, IPFSImage } from "../utils/pinata";
+import { getImages } from "../utils/pinata";
 import type { ImageProps } from "../utils/types";
 import { useLastViewedPhoto } from "../utils/useLastViewedPhoto";
 
-const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
+// Define the props interface for our page
+interface HomeProps {
+  images: ImageProps[];
+}
+
+const Home: NextPage<HomeProps> = ({ images }) => {
   const router = useRouter();
   const { photoId } = router.query;
   const [lastViewedPhoto, setLastViewedPhoto] = useLastViewedPhoto();
@@ -18,7 +23,7 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
 
   useEffect(() => {
     // This effect keeps track of the last viewed photo in the modal to keep the index page in sync when the user navigates back
-    if (lastViewedPhoto && !photoId) {
+    if (lastViewedPhoto && !photoId && lastViewedPhotoRef.current) {
       lastViewedPhotoRef.current.scrollIntoView({ block: "center" });
       setLastViewedPhoto(null);
     }
@@ -80,7 +85,7 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
               className="after:content group relative mb-5 block w-full cursor-zoom-in after:pointer-events-none after:absolute after:inset-0 after:rounded-lg after:shadow-highlight"
             >
               <Image
-                alt={name}
+                alt={name || `Image ${id}`}
                 className="transform rounded-lg brightness-90 transition will-change-auto group-hover:brightness-110"
                 style={{ transform: "translate3d(0, 0, 0)" }}
                 src={`${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${ipfsHash}`}
@@ -96,15 +101,7 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
         </div>
       </main>
       <footer className="p-6 text-center text-white/80 sm:p-12">
-        <a
-          href="https://andreiportfolio.vercel.app"
-          target="_blank"
-          className="font-semibold hover:text-white"
-          rel="noreferrer"
-        >
-          Andrei Sager
-        </a>{" "}
-        @ 2024 • Built with{" "}
+        Built with{" "}
         <a
           href="https://nextjs.org/"
           target="_blank"
@@ -137,21 +134,12 @@ const Home: NextPage = ({ images }: { images: ImageProps[] }) => {
   );
 };
 
-export const getStaticProps: GetStaticProps = async () => {
-  const images = await getImages();
-
-  // Convert IPFSImage to ImageProps
-  const convertedImages: ImageProps[] = images.map((img) => ({
-    id: img.id,
-    height: img.height,
-    width: img.width,
-    ipfsHash: img.ipfsHash,
-    name: img.name,
-  }));
+export const getStaticProps: GetStaticProps<HomeProps> = async () => {
+  const images = await getImages(process.env.PINATA_GROUP_ID);
 
   return {
     props: {
-      images: convertedImages,
+      images,
     },
     revalidate: 60,
   };

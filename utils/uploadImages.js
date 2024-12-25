@@ -1,27 +1,9 @@
-import fs from "fs";
-import path from "path";
-import exifReader from "exif-reader";
-import axios from "axios";
-import { FormData, Blob } from "formdata-node";
+const fs = require("fs");
+const path = require("path");
+const exifReader = require("exif-reader");
+const axios = require("axios");
 
-export interface ImageMetadata {
-  ipfsHash: string;
-  name: string;
-  dateTaken?: string;
-  width?: number;
-  height?: number;
-}
-
-interface ExifData {
-  exif?: {
-    DateTimeOriginal?: string;
-  };
-  image?: {
-    ModifyDate?: string;
-  };
-}
-
-export function extractDateFromFileName(fileName: string): string | null {
+function extractDateFromFileName(fileName) {
   // Match patterns like "2024-03-15" or "20240315" at the start of filename
   const datePattern = /^(\d{4}[-_]?\d{2}[-_]?\d{2})/;
   const match = fileName.match(datePattern);
@@ -36,16 +18,20 @@ export function extractDateFromFileName(fileName: string): string | null {
   return null;
 }
 
-export async function uploadToPinata(fileBuffer: Buffer, fileName: string): Promise<string> {
+async function uploadToPinata(fileBuffer, fileName) {
   try {
     const formData = new FormData();
-    formData.append("file", new Blob([fileBuffer]), fileName);
+    formData.append("file", new Blob([fileBuffer]), {
+      filename: fileName,
+      contentType: "image/jpeg",
+    });
 
     const response = await axios.post(
       "https://api.pinata.cloud/pinning/pinFileToIPFS",
       formData,
       {
         headers: {
+          ...formData.getHeaders(),
           Authorization: `Bearer ${process.env.PINATA_JWT}`,
         },
         maxContentLength: Infinity,
@@ -59,14 +45,14 @@ export async function uploadToPinata(fileBuffer: Buffer, fileName: string): Prom
   }
 }
 
-export async function uploadImagesFromDirectory(directoryPath: string): Promise<ImageMetadata[]> {
+async function uploadImagesFromDirectory(directoryPath) {
   try {
     const files = fs.readdirSync(directoryPath);
     const imageFiles = files.filter((file) =>
       /\.(jpg|jpeg|png|gif)$/i.test(file)
     );
 
-    const uploadedImages: ImageMetadata[] = [];
+    const uploadedImages = [];
 
     for (const file of imageFiles) {
       const filePath = path.join(directoryPath, file);
@@ -99,7 +85,7 @@ export async function uploadImagesFromDirectory(directoryPath: string): Promise<
   }
 }
 
-export async function testImageDates(directoryPath: string): Promise<void> {
+async function testImageDates(directoryPath) {
   try {
     console.log(`Reading directory: ${directoryPath}`);
     const files = fs.readdirSync(directoryPath);
@@ -146,16 +132,16 @@ export async function testImageDates(directoryPath: string): Promise<void> {
         // 3. Try EXIF data (last resort)
         console.log("\nAttempting to read EXIF data (last resort):");
         try {
-          let metadata: ExifData | null = null;
+          let metadata;
           try {
-            metadata = exifReader(fileBuffer) as ExifData;
+            metadata = exifReader(fileBuffer);
             console.log("Successfully read EXIF data from start of buffer");
           } catch (e) {
             try {
-              metadata = exifReader(fileBuffer.slice(12)) as ExifData;
+              metadata = exifReader(fileBuffer.slice(12));
               console.log("Successfully read EXIF data from offset 12");
             } catch (e2) {
-              console.log("Failed to read EXIF data:", e2 instanceof Error ? e2.message : String(e2));
+              console.log("Failed to read EXIF data:", e2.message);
               metadata = null;
             }
           }
@@ -173,14 +159,20 @@ export async function testImageDates(directoryPath: string): Promise<void> {
             console.log("No date information found in EXIF data");
           }
         } catch (e) {
-          console.log("Error reading EXIF data:", e instanceof Error ? e.message : String(e));
+          console.log("Error reading EXIF data:", e.message);
         }
       } catch (error) {
-        console.error(`Error processing file ${file}:`, error instanceof Error ? error.message : String(error));
+        console.error(`Error processing file ${file}:`, error.message);
       }
     }
   } catch (error) {
-    console.error("Error testing images:", error instanceof Error ? error.message : String(error));
+    console.error("Error testing images:", error.message);
     throw error;
   }
 }
+
+module.exports = {
+  uploadImagesFromDirectory,
+  testImageDates,
+  uploadToPinata,
+};

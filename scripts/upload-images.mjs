@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
 import axios from "axios";
-import { uploadImagesFromDirectory } from "../utils/uploadImages";
+import { uploadImagesFromDirectory } from "../utils/uploadImages.ts";
 
 // Load environment variables from .env.local
 dotenv.config({ path: ".env.local" });

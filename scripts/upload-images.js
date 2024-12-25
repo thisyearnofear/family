@@ -1,6 +1,6 @@
-import * as dotenv from "dotenv";
-import axios from "axios";
-import { uploadImagesFromDirectory } from "../utils/uploadImages";
+const dotenv = require("dotenv");
+const axios = require("axios");
+const { uploadImagesFromDirectory } = require("../utils/uploadImages");
 
 // Load environment variables from .env.local
 dotenv.config({ path: ".env.local" });
