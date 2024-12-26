@@ -14,6 +14,17 @@ import {
   PauseIcon,
   PlayIcon,
 } from "@heroicons/react/24/outline";
+import Collage from "./Collage";
+
+// SVG paths for zen elements
+const ZEN_ELEMENTS = {
+  enso: "M50,25 A25,25 0 1,1 75,50 A25,25 0 1,1 50,25", // Zen circle
+  kanji1: "M30,20 L70,20 M50,20 L50,80 M30,50 L70,50", // 中 (center)
+  bamboo:
+    "M50,10 L50,90 M45,20 L55,20 M45,40 L55,40 M45,60 L55,60 M45,80 L55,80",
+  wave: "M10,50 Q30,40 50,50 T90,50", // Japanese wave pattern
+  rock: "M30,70 Q50,50 70,70", // Zen garden rock line
+};
 
 interface JapaneseTimelineProps {
   images: ImageProps[];
@@ -31,6 +42,8 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
     target: containerRef,
     offset: ["start end", "end start"],
   });
+
+  const opacity = useTransform(scrollYProgress, [0, 0.2], [0.3, 1]);
 
   const [play, { pause, sound }] = useSound("/sounds/background-music.mp3", {
     volume,
@@ -72,6 +85,230 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
       []
     );
   }, [images]);
+
+  // Story mode content
+  const StoryContent = () => {
+    const allImages = groupedImages.flatMap((group) => group.images);
+    const currentImage = allImages[storyIndex];
+    const isLastImage = storyIndex === allImages.length - 1;
+
+    console.log("Story Mode Debug:", {
+      totalImages: allImages.length,
+      currentIndex: storyIndex,
+      currentImage,
+      isLastImage,
+    });
+
+    if (isLastImage) {
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 flex flex-col items-center justify-center"
+          style={{ zIndex: 40 }}
+        >
+          <h2 className="text-4xl font-japanese text-white mb-8 relative z-50">
+            思い出の一年
+            <span className="block text-lg mt-2 text-white/80">
+              A Year of Memories
+            </span>
+          </h2>
+          <div className="w-full max-w-6xl overflow-auto p-8 bg-black/20 backdrop-blur-md rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {allImages.map((image, index) => (
+                <motion.div
+                  key={image.ipfsHash}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    transition: { delay: index * 0.1 },
+                  }}
+                  className="relative aspect-[3/2] group"
+                >
+                  <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px] rounded transform -rotate-1" />
+                  <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px] rounded transform rotate-1" />
+                  <div className="relative w-full h-full rounded overflow-hidden border border-white/20">
+                    <Image
+                      src={`${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${image.ipfsHash}`}
+                      alt={image.dateTaken || "Memory"}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute bottom-2 left-2 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <p className="text-sm font-japanese">
+                        {new Date(image.dateTaken || "").toLocaleDateString(
+                          "ja-JP"
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-8 flex gap-4">
+            <button
+              onClick={() => setStoryIndex(0)}
+              className="px-6 py-3 bg-black/40 hover:bg-black/60 rounded-lg text-white transition-colors backdrop-blur-sm"
+            >
+              Start Over
+            </button>
+            <button
+              onClick={() => {
+                /* TODO: Implement create gift flow */
+              }}
+              className="px-6 py-3 bg-red-600/80 hover:bg-red-700/80 rounded-lg text-white transition-colors backdrop-blur-sm"
+            >
+              Create Your Own Gift
+            </button>
+          </div>
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.div
+        key={storyIndex}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.5 }}
+        className="fixed inset-0 flex items-center justify-center"
+        style={{ zIndex: 40 }}
+      >
+        <div className="relative w-full max-w-4xl h-full max-h-[80vh] p-4">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm rounded-lg transform -rotate-1" />
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm rounded-lg transform rotate-1" />
+          <div className="relative w-full h-full rounded-lg overflow-hidden border border-white/20">
+            {currentImage && (
+              <Image
+                src={`${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${currentImage.ipfsHash}`}
+                alt={currentImage.dateTaken || "Memory"}
+                fill
+                className="object-contain"
+                sizes="(max-width: 768px) 100vw, 80vw"
+                priority
+              />
+            )}
+          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 text-center z-50"
+          >
+            <div className="bg-black/40 backdrop-blur-sm px-6 py-3 rounded-lg border border-white/20">
+              <p className="text-2xl font-japanese text-white">
+                {new Date(currentImage?.dateTaken || "").toLocaleDateString(
+                  "ja-JP"
+                )}
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </motion.div>
+    );
+  };
+
+  // Add canvas setup for Seigaiha pattern
+  useEffect(() => {
+    const canvas = document.createElement("canvas");
+    canvas.id = "seigaiha-pattern";
+    canvas.className = "absolute inset-0 w-full h-full";
+    canvas.style.mixBlendMode = "multiply";
+    canvas.style.opacity = "0.8";
+    canvas.style.backgroundColor = "white";
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+    containerRef.current?.appendChild(canvas);
+
+    const radius = 40;
+    const iterationsX = Math.ceil(width / radius / 2) + 2;
+    const iterationsY = Math.ceil(height / radius) + 2;
+    const xGap = radius * 2;
+    const yGap = radius * 1.5;
+
+    ctx.strokeStyle = "#E5E7EB"; // Light gray for strokes
+    ctx.lineWidth = 1;
+
+    const makeCircle = (x: number, y: number, radius: number) => {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+    };
+
+    const makeCircles = (x: number, y: number, radius: number) => {
+      // Base circle with light blue fill
+      ctx.fillStyle = "#F3F4F6"; // Very light gray-blue
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Inner circles with decreasing sizes
+      const innerRadii = [0.8, 0.6, 0.4, 0.2];
+      innerRadii.forEach((scale) => {
+        makeCircle(x, y, radius * scale);
+      });
+
+      // Add a subtle red accent occasionally
+      if (Math.random() < 0.05) {
+        ctx.fillStyle = "rgba(239, 68, 68, 0.1)"; // Very light red
+        ctx.beginPath();
+        ctx.arc(x, y, radius * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+
+    // Draw the pattern
+    for (let row = 0; row < iterationsY; row++) {
+      const isEvenRow = row % 2 === 0;
+      const xOffset = isEvenRow ? radius : 0;
+
+      for (let col = -1; col < iterationsX; col++) {
+        const x = col * xGap + xOffset;
+        const y = row * yGap;
+        makeCircles(x, y, radius);
+      }
+    }
+
+    // Handle resize
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      // Redraw pattern on resize
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let row = 0; row < iterationsY; row++) {
+        const isEvenRow = row % 2 === 0;
+        const xOffset = isEvenRow ? radius : 0;
+
+        for (let col = -1; col < iterationsX; col++) {
+          const x = col * xGap + xOffset;
+          const y = row * yGap;
+          makeCircles(x, y, radius);
+        }
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (containerRef.current?.contains(canvas)) {
+        containerRef.current.removeChild(canvas);
+      }
+    };
+  }, []);
 
   // Intro sequence
   if (showIntro) {
@@ -150,11 +387,23 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
 
   // Story mode
   if (showStoryMode) {
-    const allImages = groupedImages.flatMap((group) => group.images);
-    const currentImage = allImages[storyIndex];
-
     return (
       <div className="fixed inset-0 bg-white">
+        <div
+          ref={containerRef}
+          className="absolute inset-0 bg-white"
+          style={{ zIndex: 10 }}
+        >
+          <canvas
+            id="seigaiha-pattern"
+            className="absolute inset-0 w-full h-full"
+            style={{
+              mixBlendMode: "multiply",
+              opacity: 0.8,
+              backgroundColor: "white",
+            }}
+          />
+        </div>
         <AnimatePresence mode="wait">
           <motion.div
             key={storyIndex}
@@ -164,66 +413,38 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
             transition={{ duration: 0.5 }}
             className="relative w-full h-full"
           >
-            {currentImage && (
-              <div className="relative w-full h-full">
-                <Image
-                  src={`${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${currentImage.ipfsHash}`}
-                  alt={currentImage.dateTaken || "Memory"}
-                  fill
-                  className="object-contain p-8"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-white pointer-events-none" />
-                <div className="absolute bottom-32 left-1/2 -translate-x-1/2 text-center">
-                  <p className="text-2xl font-japanese mb-4 text-stone-800">
-                    {new Date(currentImage.dateTaken || "").toLocaleDateString(
-                      "en-US",
-                      {
-                        month: "long",
-                        day: "numeric",
-                        year: "numeric",
-                      }
-                    )}
-                  </p>
-                  <div className="w-12 h-0.5 bg-red-600 mx-auto" />
-                </div>
-              </div>
-            )}
+            {StoryContent()}
           </motion.div>
         </AnimatePresence>
 
         {/* Navigation controls */}
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-4">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-4 z-50">
           <button
             onClick={() => {
               if (storyIndex > 0) {
                 setStoryIndex(storyIndex - 1);
               }
             }}
-            className="px-6 py-3 bg-white hover:bg-stone-50 rounded-lg text-stone-900 transition-colors border border-stone-200 shadow-sm disabled:opacity-50"
+            className="px-6 py-3 bg-white/80 hover:bg-white/90 rounded-lg text-stone-800 transition-colors backdrop-blur-sm border border-stone-200 disabled:opacity-50"
             disabled={storyIndex === 0}
           >
             Previous
           </button>
           <button
             onClick={() => {
+              const allImages = groupedImages.flatMap((group) => group.images);
               if (storyIndex < allImages.length - 1) {
                 setStoryIndex(storyIndex + 1);
-              } else {
-                setShowStoryMode(false);
               }
             }}
-            className="px-6 py-3 bg-white hover:bg-stone-50 rounded-lg text-stone-900 transition-colors border border-stone-200 shadow-sm group"
+            className="px-6 py-3 bg-white/80 hover:bg-white/90 rounded-lg text-stone-800 transition-colors backdrop-blur-sm border border-stone-200 group"
           >
-            {storyIndex < allImages.length - 1 ? (
-              <span className="flex items-center gap-2">
-                Next
-                <span className="group-hover:translate-x-1 transition-transform">
-                  →
-                </span>
+            <span className="flex items-center gap-2">
+              Next
+              <span className="group-hover:translate-x-1 transition-transform">
+                →
               </span>
-            ) : (
-              "View All Memories"
-            )}
+            </span>
           </button>
         </div>
 
@@ -232,7 +453,7 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1 }}
-          className="fixed bottom-8 right-8 z-50 bg-white/90 backdrop-blur-lg rounded-lg p-4 flex items-center gap-4 border border-stone-200 shadow-sm"
+          className="fixed top-4 right-8 z-50 bg-white/90 backdrop-blur-sm rounded-lg p-4 flex items-center gap-4 border border-stone-200"
         >
           <div className="flex items-center gap-2">
             <button
@@ -313,7 +534,7 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
       <div className="relative z-10">
         <motion.div
           className="max-w-7xl mx-auto px-4"
-          style={{ opacity: useTransform(scrollYProgress, [0, 0.2], [0.3, 1]) }}
+          style={{ opacity }}
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
@@ -359,12 +580,7 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
                         <div className="absolute bottom-4 left-4 text-stone-800">
                           <p className="text-sm font-japanese">
                             {new Date(image.dateTaken || "").toLocaleDateString(
-                              "en-US",
-                              {
-                                month: "long",
-                                day: "numeric",
-                                year: "numeric",
-                              }
+                              "ja-JP"
                             )}
                           </p>
                         </div>

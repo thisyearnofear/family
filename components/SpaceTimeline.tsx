@@ -1,4 +1,4 @@
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import type { ImageProps } from "../utils/types";
@@ -9,19 +9,30 @@ import {
   PauseIcon,
   PlayIcon,
 } from "@heroicons/react/24/outline";
+import * as THREE from "three";
+import Collage from "./Collage";
 
 interface SpaceTimelineProps {
   images: ImageProps[];
 }
 
-const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images }) => {
+const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "end start"],
-  });
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const [showIntro, setShowIntro] = useState(true);
+  const [showStoryMode, setShowStoryMode] = useState(false);
+  const [storyIndex, setStoryIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [volume, setVolume] = useState(0.5);
+  const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  const targetCameraZRef = useRef(5);
+
+  const introTexts = [
+    "Welcome to a special journey through time and space...",
+    "A collection of cherished memories, captured in the stars...",
+    "Each photo tells a story of love, laughter, and togetherness...",
+    "Let's explore these moments together...",
+  ];
 
   const [play, { pause, sound }] = useSound("/sounds/background-music.mp3", {
     volume,
@@ -42,99 +53,10 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images }) => {
     }
   }, [volume, sound]);
 
-  // Add scroll-driven animations for the photos
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const style = document.createElement("style");
-    style.textContent = `
-      .timeline-section {
-        view-timeline-name: --section;
-        view-timeline-axis: block;
-      }
-
-      .photo-container {
-        view-timeline-name: --photo;
-        view-timeline-axis: block;
-      }
-
-      .photo-container {
-        animation: photo-reveal linear;
-        animation-timeline: --photo;
-        animation-range: entry 10% cover 30%;
-      }
-
-      .photo-container img {
-        animation: photo-scale linear;
-        animation-timeline: --photo;
-        animation-range: entry 10% cover 30%;
-      }
-
-      .month-title {
-        animation: slide-in linear;
-        animation-timeline: --section;
-        animation-range: entry 0% cover 20%;
-      }
-
-      @keyframes photo-reveal {
-        from {
-          opacity: 0;
-          transform: perspective(1000px) rotateX(10deg) translateY(50px);
-        }
-        to {
-          opacity: 1;
-          transform: perspective(1000px) rotateX(0) translateY(0);
-        }
-      }
-
-      @keyframes photo-scale {
-        from {
-          transform: scale(1.2);
-        }
-        to {
-          transform: scale(1);
-        }
-      }
-
-      @keyframes slide-in {
-        from {
-          opacity: 0;
-          transform: translateX(-50px);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(0);
-        }
-      }
-
-      /* Parallax effect for photos */
-      .photo-parallax {
-        animation: parallax linear;
-        animation-timeline: scroll(root);
-        animation-range: contain;
-      }
-
-      @keyframes parallax {
-        from {
-          transform: translateY(0);
-        }
-        to {
-          transform: translateY(-50px);
-        }
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
-  const opacity = useTransform(scrollYProgress, [0, 0.2], [0.3, 1]);
-  const scale = useTransform(scrollYProgress, [0, 0.2], [0.8, 1]);
-
   // Group images by month
   const groupedImages = useMemo(() => {
+    if (!images || !Array.isArray(images)) return [];
+
     return images.reduce(
       (groups: { month: string; images: ImageProps[] }[], image) => {
         if (!image.dateTaken) return groups;
@@ -153,111 +75,339 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images }) => {
     );
   }, [images]);
 
-  return (
-    <div ref={containerRef} className="relative min-h-screen py-20">
-      {/* Music Controls */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1 }}
-        className="fixed bottom-8 right-8 z-50 bg-black/80 backdrop-blur-lg rounded-full p-4 flex items-center gap-4 border border-white/10"
-      >
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors"
-          >
-            {isPlaying ? (
-              <PauseIcon className="w-6 h-6 text-white" />
-            ) : (
-              <PlayIcon className="w-6 h-6 text-white" />
-            )}
-          </button>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={volume}
-            onChange={(e) => setVolume(parseFloat(e.target.value))}
-            className="w-24 accent-purple-500"
-          />
-          {volume === 0 ? (
-            <VolumeOffIcon className="w-6 h-6 text-white" />
-          ) : (
-            <VolumeUpIcon className="w-6 h-6 text-white" />
-          )}
-        </div>
-        <div className="text-white/80 text-sm">
-          Now Playing: "Hopes and Dreams" by Papa
-        </div>
-      </motion.div>
+  // Update ThreeJS setup and animation
+  useEffect(() => {
+    if (!containerRef.current) return;
 
-      {/* Timeline Content */}
-      <div className="relative z-10">
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    cameraRef.current = camera;
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    containerRef.current.appendChild(renderer.domElement);
+
+    // Stars setup with different layers for parallax effect
+    const createStarLayer = (count: number, size: number, depth: number) => {
+      const geometry = new THREE.BufferGeometry();
+      const material = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size,
+        transparent: true,
+        opacity: Math.min(1, depth * 0.5),
+      });
+
+      const vertices = [];
+      for (let i = 0; i < count; i++) {
+        vertices.push(
+          (Math.random() - 0.5) * 2000,
+          (Math.random() - 0.5) * 2000,
+          -Math.random() * depth
+        );
+      }
+
+      geometry.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(vertices, 3)
+      );
+      return new THREE.Points(geometry, material);
+    };
+
+    const starLayers = [
+      createStarLayer(5000, 0.15, 1000),
+      createStarLayer(5000, 0.1, 1500),
+      createStarLayer(5000, 0.05, 2000),
+    ];
+
+    starLayers.forEach((layer) => scene.add(layer));
+
+    // Camera position
+    camera.position.z = targetCameraZRef.current;
+
+    // Animation
+    let frame = 0;
+    const animate = () => {
+      frame = requestAnimationFrame(animate);
+
+      // Rotate star layers at different speeds
+      starLayers.forEach((layer, index) => {
+        layer.rotation.x += 0.0001 * (index + 1);
+        layer.rotation.y += 0.0002 * (index + 1);
+      });
+
+      // Camera movement during intro
+      if (showIntro) {
+        targetCameraZRef.current -= 0.1;
+        if (targetCameraZRef.current < -200) {
+          targetCameraZRef.current = 5;
+        }
+        camera.position.z = targetCameraZRef.current;
+      } else if (showStoryMode) {
+        // Smooth camera movement for story mode
+        camera.position.z = THREE.MathUtils.lerp(camera.position.z, 100, 0.02);
+      }
+
+      renderer.render(scene, camera);
+    };
+
+    animate();
+
+    // Handle intro text sequence
+    if (showIntro) {
+      const textInterval = setInterval(() => {
+        setCurrentTextIndex((prev) => {
+          if (prev >= introTexts.length - 1) {
+            clearInterval(textInterval);
+            setTimeout(() => {
+              setShowIntro(false);
+              setShowStoryMode(true);
+            }, 2000);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 3000);
+
+      return () => clearInterval(textInterval);
+    }
+
+    // Cleanup
+    return () => {
+      if (containerRef.current?.contains(renderer.domElement)) {
+        containerRef.current.removeChild(renderer.domElement);
+      }
+      cancelAnimationFrame(frame);
+      renderer.dispose();
+    };
+  }, [showIntro, introTexts.length, showStoryMode]);
+
+  // Story mode content
+  const StoryContent = () => {
+    const allImages = groupedImages.flatMap((group) => group.images);
+    const currentImage = allImages[storyIndex];
+    const isLastImage = storyIndex === allImages.length - 1;
+
+    console.log("Story Mode Debug:", {
+      totalImages: allImages.length,
+      currentIndex: storyIndex,
+      currentImage,
+      showStoryMode,
+      isLastImage,
+    });
+
+    if (isLastImage) {
+      return (
         <motion.div
-          className="max-w-7xl mx-auto px-4"
-          style={{ opacity, scale }}
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 flex flex-col items-center justify-center p-8"
+          style={{ zIndex: 40 }}
         >
-          {groupedImages.map((group, groupIndex) => (
-            <motion.section
-              key={group.month}
-              className="timeline-section mb-20"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, margin: "-100px" }}
+          <h2 className="text-4xl font-bold text-white mb-8">
+            Your Year in Photos
+          </h2>
+          <div className="w-full max-w-6xl overflow-auto">
+            <Collage images={allImages} />
+          </div>
+          <div className="mt-8 flex gap-4">
+            <button
+              onClick={() => setStoryIndex(0)}
+              className="px-6 py-3 bg-black/70 hover:bg-blue-900/70 rounded-lg text-white transition-colors border border-blue-500/30 backdrop-blur-sm"
             >
-              <div className="mb-8 relative">
-                <h2 className="month-title text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
-                  {group.month}
-                </h2>
-              </div>
+              Start Over
+            </button>
+            <button
+              onClick={() => {
+                /* TODO: Implement create gift flow */
+              }}
+              className="px-6 py-3 bg-blue-600/70 hover:bg-blue-700/70 rounded-lg text-white transition-colors border border-blue-500/30 backdrop-blur-sm"
+            >
+              Create Your Own Gift
+            </button>
+          </div>
+        </motion.div>
+      );
+    }
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {group.images.map((image) => (
-                  <div
-                    key={image.id}
-                    className="photo-container relative aspect-[3/2] rounded-xl overflow-hidden group hover:z-10"
-                  >
-                    <div className="photo-parallax w-full h-full">
-                      <Image
-                        alt={image.dateTaken || "Memory"}
-                        className="transform rounded-xl brightness-90 transition will-change-auto group-hover:brightness-110 group-hover:scale-110 duration-700 object-cover"
-                        style={{ transform: "translate3d(0, 0, 0)" }}
-                        src={`${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${image.ipfsHash}`}
-                        fill
-                        sizes="(max-width: 640px) 100vw,
-                               (max-width: 1280px) 50vw,
-                               (max-width: 1536px) 33vw,
-                               25vw"
-                      />
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                        initial={{ opacity: 0 }}
-                        whileHover={{ opacity: 1 }}
-                      >
-                        <div className="absolute bottom-4 left-4 text-white">
-                          <p className="text-sm font-medium">
-                            {new Date(image.dateTaken || "").toLocaleDateString(
-                              "en-US",
-                              {
-                                month: "long",
-                                day: "numeric",
-                                year: "numeric",
-                              }
-                            )}
-                          </p>
-                        </div>
-                      </motion.div>
-                    </div>
-                  </div>
-                ))}
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={storyIndex}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.5 }}
+          className="fixed inset-0 flex items-center justify-center pointer-events-none"
+          style={{ zIndex: 40 }}
+        >
+          <div className="relative w-full max-w-3xl h-full max-h-[80vh] pointer-events-auto p-4">
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm rounded-lg transform -rotate-1" />
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm rounded-lg transform rotate-1" />
+            <div className="relative w-full h-full rounded-lg overflow-hidden border-2 border-blue-500/30">
+              <Image
+                src={`${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${currentImage.ipfsHash}`}
+                alt={currentImage.dateTaken || "Memory"}
+                fill
+                className="object-contain"
+                priority
+                sizes="(max-width: 768px) 100vw, 80vw"
+                onLoad={() =>
+                  console.log("Image loaded:", currentImage.ipfsHash)
+                }
+                onError={(e) => console.error("Image load error:", e)}
+              />
+            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 text-center"
+            >
+              <div className="bg-black/70 backdrop-blur-sm px-6 py-3 rounded-lg border border-blue-500/30">
+                <p className="text-2xl font-bold text-blue-400">
+                  {new Date(currentImage.dateTaken || "").toLocaleDateString(
+                    "en-US",
+                    {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    }
+                  )}
+                </p>
               </div>
-            </motion.section>
-          ))}
+            </motion.div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black overflow-hidden">
+      <div
+        ref={containerRef}
+        className="absolute inset-0"
+        style={{ zIndex: 10 }}
+      />
+
+      {/* Overlay content */}
+      <div className="relative" style={{ zIndex: 20 }}>
+        {showIntro && (
+          <div
+            className="fixed inset-0 flex items-center justify-center"
+            style={{ zIndex: 30 }}
+          >
+            <motion.div
+              key={currentTextIndex}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 1 }}
+              className="text-center px-4 max-w-4xl mx-auto"
+            >
+              <div className="bg-black/50 backdrop-blur-sm rounded-lg py-8 px-6 border border-blue-500/30">
+                <p className="text-3xl md:text-4xl text-white font-bold">
+                  {introTexts[currentTextIndex]}
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showStoryMode && (
+          <div className="relative" style={{ zIndex: 30 }}>
+            <StoryContent />
+
+            {/* Navigation controls */}
+            <div
+              className="fixed bottom-16 left-1/2 -translate-x-1/2 flex gap-4"
+              style={{ zIndex: 50 }}
+            >
+              <button
+                onClick={() => {
+                  console.log("Previous clicked, current index:", storyIndex);
+                  if (storyIndex > 0) {
+                    setStoryIndex(storyIndex - 1);
+                  }
+                }}
+                className="px-6 py-3 bg-black/70 hover:bg-blue-900/70 rounded-lg text-white transition-colors border border-blue-500/30 backdrop-blur-sm disabled:opacity-50"
+                disabled={storyIndex === 0}
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => {
+                  const allImages = groupedImages.flatMap(
+                    (group) => group.images
+                  );
+                  console.log(
+                    "Next clicked, current index:",
+                    storyIndex,
+                    "total images:",
+                    allImages.length
+                  );
+                  if (storyIndex < allImages.length - 1) {
+                    setStoryIndex(storyIndex + 1);
+                  }
+                }}
+                className="px-6 py-3 bg-black/70 hover:bg-blue-900/70 rounded-lg text-white transition-colors border border-blue-500/30 backdrop-blur-sm group"
+                disabled={
+                  storyIndex ===
+                  groupedImages.flatMap((group) => group.images).length - 1
+                }
+              >
+                <span className="flex items-center gap-2">
+                  Next
+                  <span className="group-hover:translate-x-1 transition-transform">
+                    →
+                  </span>
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Music controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1 }}
+          className="fixed top-4 right-8"
+          style={{ zIndex: 60 }}
+        >
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsPlaying(!isPlaying)}
+              className="p-2 hover:bg-blue-900/50 rounded-full transition-colors"
+            >
+              {isPlaying ? (
+                <PauseIcon className="w-6 h-6 text-white" />
+              ) : (
+                <PlayIcon className="w-6 h-6 text-white" />
+              )}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={volume}
+              onChange={(e) => setVolume(parseFloat(e.target.value))}
+              className="w-24 accent-blue-500"
+            />
+            {volume === 0 ? (
+              <VolumeOffIcon className="w-6 h-6 text-white" />
+            ) : (
+              <VolumeUpIcon className="w-6 h-6 text-white" />
+            )}
+          </div>
+          <div className="text-blue-200 text-sm">
+            Now Playing: "Hopes and Dreams" by Papa
+          </div>
         </motion.div>
       </div>
     </div>
