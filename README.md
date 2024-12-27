@@ -1,61 +1,95 @@
-## My Goal With This Project
+# Memory Flow - Interactive Year-End Memory Experience
 
-My goal was to simulate a professional work environment.
+## Vision
 
-- I built this app using a [Next.js](https://nextjs.org/docs) [starter template](https://vercel.com/templates/next.js/image-gallery-starter), [Cloudinary API](https://cloudinary.com/documentation/transformation_reference) to manage the assets, and [Tailwind](https://tailwindcss.com/docs/installation) for the styling.
-- I worked with tasks on a Kanban board using [Todoist](https://todoist.com/): [Screenshot Of Archived Board](https://github.com/user-attachments/assets/dfe84e7c-9938-4a0a-a72c-e1e5737c891f)
-- I used feature branches and pull requests: [Pull Request Example](https://github.com/user-attachments/assets/6773d4ed-5648-465a-8035-cde7c3028c2d)
+Memory Flow is an interactive gift experience that lets you share your year's most meaningful moments with loved ones. It transforms your photos into an engaging story that celebrates connection, presented in either a serene Zen Garden or cosmic Space journey theme.
 
-## How To Navigate This Project
+### Key Features
 
-- Responsive components using tailwind.
-- Fetches items applying orientation transformation using Cloudinary API.
-- Refetches items on breakpoints on carousel view as the Cloudinary API provides horizontal or vertical padding based on orientation on fetch.
+- **Password-Protected Experiences**: Each gift experience is private and accessible only with a password
+- **Immersive Storytelling**: Photos flow naturally through an automated story mode with manual controls
+- **Monthly Collections**: Photos are beautifully arranged in monthly collages
+- **Grand Finale**: A stunning year-end collage that captures all moments
+- **Theme Options**: Choose between Space and Zen Garden themes, each with unique animations
+- **Gift Creation**: Recipients can create their own gift experiences to share
+- **Decentralized Storage**: Uses IPFS/Pinata for secure, decentralized photo storage
 
-## Why I Built This Project This Way
+## Technical Implementation
 
-I set myself the goal of creating a presentable gallery website within a 1-week timeframe, with the deadline being my grandfather's anniversary.
+- Built with [Next.js](https://nextjs.org/) for seamless user experience
+- Styled with [Tailwind CSS](https://tailwindcss.com/) for beautiful, responsive design
+- Uses [Framer Motion](https://www.framer.com/motion/) for smooth animations
+- Implements [IPFS](https://ipfs.tech/) via [Pinata](https://www.pinata.cloud/) for decentralized storage
+- Features [Three.js](https://threejs.org/) for immersive 3D backgrounds
 
-- I intentionally used a template that uses Tailwind with the Cloudinary API already built-in as I set velocity as the highest priority for this project.
-- For styling I installed a linter called prettier that sorts the elements and tailwind classes automatically.
+## Project Structure
 
-## If I Had More Time I Would Change These
+- `components/`: Reusable UI components including timelines and collages
+- `contexts/`: React context providers for theme and auth state
+- `hooks/`: Custom React hooks for shared functionality
+- `pages/`: Next.js pages and API routes
+- `utils/`: Utility functions and helpers
+- `styles/`: Global styles and Tailwind configuration
 
-- Modify the template to support Video items using Cloudinary API. 
-- Contribute my changes to the starter template as a pull request. <!-- The support for Video items was already broken when I used the template. -->
-- Add authentication with a content management UI to easily add items on the site instead of on Cloudinary. <!-- Use tailwind to create UI and Cloudinary API to manage images -->
-- Mocking Cloudinary http requests using Jest. <!-- To avoid external dependencies -->
+## Development Roadmap
 
-## Usage
+### Phase 1 - Core Experience (Current)
 
-1. Fork this repository
-2. Create a [Cloudinary account](https://cloudinary.com/users/register_free)
-3. Set up your Cloudinary API configuration and your environment variables
-4. Run ```npx install```
-5. Run ```npx run dev```
+- [x] Basic timeline implementation
+- [x] Theme switching (Space/Zen)
+- [x] Photo navigation and viewing
+- [x] Monthly collages
+- [x] Animation and transitions
 
-### How To Add Images?
+### Phase 2 - Gift Creation (In Progress)
 
-You can easily add images by:
+- [ ] Password protection system
+- [ ] Photo upload and IPFS integration
+- [ ] Creation wizard interface
+- [ ] Theme customization
+- [ ] Message personalization
 
-1. logging in to your cloudinary account,
-2. go to assets,
-3. then folders,
-4. and drag and drop them as you like.
+### Phase 3 - Enhancement
 
-> login > assets > folders
+- [ ] Advanced collage layouts
+- [ ] Additional themes
+- [ ] Sharing mechanisms
+- [ ] Mobile optimization
+- [ ] Analytics integration
 
-# License
+### Phase 4 - Monetization
 
-All images and videos in this repository are licensed under a [Creative Commons Attribution-NonCommercial-NoDerivs 4.0 International License][cc-by-nc-nd].
+- [ ] Payment integration
+- [ ] Subscription/pricing models
+- [ ] Premium features
+- [ ] Gift vouchers
 
-[![CC BY-NC-ND 4.0][cc-by-nc-nd-image]][cc-by-nc-nd]
+## Getting Started
 
-[cc-by-nc-nd]: http://creativecommons.org/licenses/by-nc-nd/4.0/  
-[cc-by-nc-nd-image]: https://licensebuttons.net/l/by-nc-nd/4.0/88x31.png  
-[cc-by-nc-nd-shield]: https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg  
+1. Clone this repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Set up environment variables:
+   ```env
+   NEXT_PUBLIC_PINATA_GATEWAY=your_gateway_url
+   ```
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-### Note
+## Contributing
 
-- **Images and Videos**: All images and videos in this repository are subject to the Creative Commons license mentioned above.  
-- **Other Content**: If the repository includes other types of content (e.g., code), their license will be indicated separately if applicable.
+Contributions are welcome! Please read our contributing guidelines for details.
+
+## License
+
+### Code
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+### Media Content
+
+All images and videos are licensed under [Creative Commons Attribution-NonCommercial-NoDerivs 4.0](http://creativecommons.org/licenses/by-nc-nd/4.0/).

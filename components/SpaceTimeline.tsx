@@ -1,16 +1,10 @@
+import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRef, useEffect, useState, useMemo } from "react";
-import Image from "next/image";
-import type { ImageProps } from "../utils/types";
 import useSound from "use-sound";
-import {
-  SpeakerWaveIcon as VolumeUpIcon,
-  SpeakerXMarkIcon as VolumeOffIcon,
-  PauseIcon,
-  PlayIcon,
-} from "@heroicons/react/24/outline";
 import * as THREE from "three";
-import Collage from "./Collage";
+import MonthlyView from "./MonthlyView";
+import TimelineControls from "./TimelineControls";
+import type { ImageProps } from "../utils/types";
 
 interface SpaceTimelineProps {
   images: ImageProps[];
@@ -20,8 +14,7 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const [showIntro, setShowIntro] = useState(true);
-  const [showStoryMode, setShowStoryMode] = useState(false);
-  const [storyIndex, setStoryIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [volume, setVolume] = useState(0.5);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
@@ -34,54 +27,43 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
     "Let's explore these moments together...",
   ];
 
+  // Sound setup
   const [play, { pause, sound }] = useSound("/sounds/background-music.mp3", {
     volume,
     loop: true,
   });
 
   useEffect(() => {
-    if (isPlaying) {
-      play();
-    } else {
-      pause();
-    }
+    if (isPlaying) play();
+    else pause();
+    return () => pause();
   }, [isPlaying, play, pause]);
 
   useEffect(() => {
-    if (sound) {
-      sound.volume(volume);
-    }
+    if (sound) sound.volume(volume);
   }, [volume, sound]);
 
-  // Group images by month
-  const groupedImages = useMemo(() => {
-    if (!images || !Array.isArray(images)) return [];
+  // Auto-advance timer
+  useEffect(() => {
+    if (!isPlaying || showIntro) return;
 
-    return images.reduce(
-      (groups: { month: string; images: ImageProps[] }[], image) => {
-        if (!image.dateTaken) return groups;
-        const month = new Date(image.dateTaken).toLocaleString("default", {
-          month: "long",
-        });
-        const existingGroup = groups.find((g) => g.month === month);
-        if (existingGroup) {
-          existingGroup.images.push(image);
-        } else {
-          groups.push({ month, images: [image] });
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => {
+        if (prev >= images.length - 1) {
+          return prev;
         }
-        return groups;
-      },
-      []
-    );
-  }, [images]);
+        return prev + 1;
+      });
+    }, 5000);
 
-  // Update ThreeJS setup and animation
+    return () => clearInterval(timer);
+  }, [isPlaying, showIntro, images.length]);
+
+  // ThreeJS setup and animation
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Store ref value in variable for cleanup
     const currentRef = containerRef.current;
-
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -93,6 +75,14 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     currentRef.appendChild(renderer.domElement);
+
+    // Handle resize
+    const handleResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener("resize", handleResize);
 
     // Stars setup with different layers for parallax effect
     const createStarLayer = (count: number, size: number, depth: number) => {
@@ -142,14 +132,14 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
         layer.rotation.y += 0.0002 * (index + 1);
       });
 
-      // Camera movement during intro
+      // Camera movement
       if (showIntro) {
         targetCameraZRef.current -= 0.1;
         if (targetCameraZRef.current < -200) {
           targetCameraZRef.current = 5;
         }
         camera.position.z = targetCameraZRef.current;
-      } else if (showStoryMode) {
+      } else {
         // Smooth camera movement for story mode
         camera.position.z = THREE.MathUtils.lerp(camera.position.z, 100, 0.02);
       }
@@ -167,7 +157,6 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
             clearInterval(textInterval);
             setTimeout(() => {
               setShowIntro(false);
-              setShowStoryMode(true);
             }, 2000);
             return prev;
           }
@@ -184,110 +173,10 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
         currentRef.removeChild(renderer.domElement);
       }
       cancelAnimationFrame(frame);
+      window.removeEventListener("resize", handleResize);
       renderer.dispose();
     };
-  }, [showIntro, introTexts.length, showStoryMode]);
-
-  // Story mode content
-  const StoryContent = () => {
-    const allImages = groupedImages.flatMap((group) => group.images);
-    const currentImage = allImages[storyIndex];
-    const isLastImage = storyIndex === allImages.length - 1;
-
-    console.log("Story Mode Debug:", {
-      totalImages: allImages.length,
-      currentIndex: storyIndex,
-      currentImage,
-      showStoryMode,
-      isLastImage,
-    });
-
-    if (isLastImage) {
-      return (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 flex flex-col items-center justify-center p-8"
-          style={{ zIndex: 40 }}
-        >
-          <h2 className="text-4xl font-bold text-white mb-8">
-            Your Year in Photos
-          </h2>
-          <div className="w-full max-w-6xl overflow-auto">
-            <Collage images={allImages} />
-          </div>
-          <div className="mt-8 flex gap-4">
-            <button
-              onClick={() => setStoryIndex(0)}
-              className="px-6 py-3 bg-black/70 hover:bg-blue-900/70 rounded-lg text-white transition-colors border border-blue-500/30 backdrop-blur-sm"
-            >
-              Start Over
-            </button>
-            <button
-              onClick={() => {
-                /* TODO: Implement create gift flow */
-              }}
-              className="px-6 py-3 bg-blue-600/70 hover:bg-blue-700/70 rounded-lg text-white transition-colors border border-blue-500/30 backdrop-blur-sm"
-            >
-              Create Your Own Gift
-            </button>
-          </div>
-        </motion.div>
-      );
-    }
-
-    return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={storyIndex}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          transition={{ duration: 0.5 }}
-          className="fixed inset-0 flex items-center justify-center pointer-events-none"
-          style={{ zIndex: 40 }}
-        >
-          <div className="relative w-full max-w-3xl h-full max-h-[80vh] pointer-events-auto p-4">
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm rounded-lg transform -rotate-1" />
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm rounded-lg transform rotate-1" />
-            <div className="relative w-full h-full rounded-lg overflow-hidden border-2 border-blue-500/30">
-              <Image
-                src={`${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${currentImage.ipfsHash}`}
-                alt={currentImage.dateTaken || "Memory"}
-                fill
-                className="object-contain"
-                priority
-                sizes="(max-width: 768px) 100vw, 80vw"
-                onLoad={() =>
-                  console.log("Image loaded:", currentImage.ipfsHash)
-                }
-                onError={(e) => console.error("Image load error:", e)}
-              />
-            </div>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 text-center"
-            >
-              <div className="bg-black/70 backdrop-blur-sm px-6 py-3 rounded-lg border border-blue-500/30">
-                <p className="text-2xl font-bold text-blue-400">
-                  {new Date(currentImage.dateTaken || "").toLocaleDateString(
-                    "en-US",
-                    {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    }
-                  )}
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        </motion.div>
-      </AnimatePresence>
-    );
-  };
+  }, [showIntro, introTexts.length]);
 
   return (
     <div className="fixed inset-0 bg-black overflow-hidden">
@@ -299,7 +188,7 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
 
       {/* Overlay content */}
       <div className="relative" style={{ zIndex: 20 }}>
-        {showIntro && (
+        {showIntro ? (
           <div
             className="fixed inset-0 flex items-center justify-center"
             style={{ zIndex: 30 }}
@@ -319,99 +208,33 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
               </div>
             </motion.div>
           </div>
-        )}
-
-        {showStoryMode && (
-          <div className="relative" style={{ zIndex: 30 }}>
-            <StoryContent />
-
-            {/* Navigation controls */}
-            <div
-              className="fixed bottom-16 left-1/2 -translate-x-1/2 flex gap-4"
-              style={{ zIndex: 50 }}
-            >
-              <button
-                onClick={() => {
-                  console.log("Previous clicked, current index:", storyIndex);
-                  if (storyIndex > 0) {
-                    setStoryIndex(storyIndex - 1);
-                  }
-                }}
-                className="px-6 py-3 bg-black/70 hover:bg-blue-900/70 rounded-lg text-white transition-colors border border-blue-500/30 backdrop-blur-sm disabled:opacity-50"
-                disabled={storyIndex === 0}
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => {
-                  const allImages = groupedImages.flatMap(
-                    (group) => group.images
-                  );
-                  console.log(
-                    "Next clicked, current index:",
-                    storyIndex,
-                    "total images:",
-                    allImages.length
-                  );
-                  if (storyIndex < allImages.length - 1) {
-                    setStoryIndex(storyIndex + 1);
-                  }
-                }}
-                className="px-6 py-3 bg-black/70 hover:bg-blue-900/70 rounded-lg text-white transition-colors border border-blue-500/30 backdrop-blur-sm group"
-                disabled={
-                  storyIndex ===
-                  groupedImages.flatMap((group) => group.images).length - 1
-                }
-              >
-                <span className="flex items-center gap-2">
-                  Next
-                  <span className="group-hover:translate-x-1 transition-transform">
-                    →
-                  </span>
-                </span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Music controls */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1 }}
-          className="fixed top-4 right-8"
-          style={{ zIndex: 60 }}
-        >
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="p-2 hover:bg-blue-900/50 rounded-full transition-colors"
-            >
-              {isPlaying ? (
-                <PauseIcon className="w-6 h-6 text-white" />
-              ) : (
-                <PlayIcon className="w-6 h-6 text-white" />
-              )}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={volume}
-              onChange={(e) => setVolume(parseFloat(e.target.value))}
-              className="w-24 accent-blue-500"
+        ) : (
+          <>
+            <MonthlyView
+              images={images}
+              currentIndex={currentIndex}
+              onImageClick={setCurrentIndex}
+              theme="space"
             />
-            {volume === 0 ? (
-              <VolumeOffIcon className="w-6 h-6 text-white" />
-            ) : (
-              <VolumeUpIcon className="w-6 h-6 text-white" />
-            )}
-          </div>
-          <div className="text-blue-200 text-sm">
-            Now Playing: &quot;Hopes and Dreams&quot; by Papa
-          </div>
-        </motion.div>
+
+            <TimelineControls
+              theme="space"
+              isPlaying={isPlaying}
+              setIsPlaying={setIsPlaying}
+              volume={volume}
+              setVolume={setVolume}
+              onPrevious={() =>
+                setCurrentIndex((prev) => Math.max(0, prev - 1))
+              }
+              onNext={() =>
+                setCurrentIndex((prev) => Math.min(images.length - 1, prev + 1))
+              }
+              canGoPrevious={currentIndex > 0}
+              canGoNext={currentIndex < images.length - 1}
+              currentTrack='"Hopes and Dreams" by Papa'
+            />
+          </>
+        )}
       </div>
     </div>
   );

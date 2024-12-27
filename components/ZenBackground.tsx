@@ -24,7 +24,20 @@ const ZenBackground: React.FC<ZenBackgroundProps> = ({ mode = "story" }) => {
 
     const sketch = (p: p5) => {
       let layer: p5.Graphics;
-      const kanji = ["禅", "庭", "和", "心", "静", "愛", "平"];
+      const kanji = [
+        "愛", // Love
+        "家", // Family/Home
+        "絆", // Bonds/Connections
+        "情", // Feelings/Emotion
+        "恩", // Kindness/Grace
+        "縁", // Destiny/Connection
+        "幸", // Happiness
+        "祈", // Prayer/Wish
+        "夢", // Dreams
+        "心", // Heart
+        "親", // Parent/Intimacy
+        "恋", // Love/Affection
+      ];
       let particles: Particle[] = [];
 
       p.setup = () => {
