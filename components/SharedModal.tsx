@@ -14,6 +14,11 @@ import downloadPhoto from "../utils/downloadPhoto";
 import { range } from "../utils/range";
 import type { ImageProps, SharedModalProps } from "../utils/types";
 
+// Helper function to get full IPFS URL
+const getIpfsUrl = (image: ImageProps) => {
+  return `${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${image.ipfsHash}`;
+};
+
 export default function SharedModal({
   index,
   images = [],
@@ -48,6 +53,18 @@ export default function SharedModal({
 
   const getImageSrc = (image: ImageProps) => {
     return `${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${image.ipfsHash}`;
+  };
+
+  const handleDownload = () => {
+    if (!currentImage) return;
+
+    const url = getIpfsUrl(currentImage);
+    const filename = currentImage.dateTaken
+      ? `memory-${
+          new Date(currentImage.dateTaken).toISOString().split("T")[0]
+        }.jpg`
+      : `memory-${currentImage.ipfsHash.slice(0, 8)}.jpg`;
+    downloadPhoto(url, filename);
   };
 
   if (!currentImage) {
@@ -117,9 +134,7 @@ export default function SharedModal({
               )}
               <div className="absolute right-0 top-0 flex items-center gap-2 p-3 text-white">
                 <button
-                  onClick={() =>
-                    downloadPhoto(getImageSrc(currentImage), currentImage.name)
-                  }
+                  onClick={handleDownload}
                   className="rounded-full bg-black/50 p-2 text-white backdrop-blur-lg transition hover:bg-black/75 hover:text-white"
                   title="Download photo"
                 >

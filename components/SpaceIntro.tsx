@@ -21,6 +21,9 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Store ref value in variable for cleanup
+    const currentRef = containerRef.current;
+
     // Scene setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
@@ -31,7 +34,16 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
     );
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    containerRef.current.appendChild(renderer.domElement);
+    currentRef.appendChild(renderer.domElement);
+
+    // Handle resize
+    const handleResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+
+    window.addEventListener("resize", handleResize);
 
     // Stars
     const starGeometry = new THREE.BufferGeometry();
@@ -99,14 +111,15 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
 
     // Cleanup
     return () => {
-      if (containerRef.current?.contains(renderer.domElement)) {
-        containerRef.current.removeChild(renderer.domElement);
+      if (currentRef?.contains(renderer.domElement)) {
+        currentRef.removeChild(renderer.domElement);
       }
       clearInterval(textInterval);
       cancelAnimationFrame(frame);
+      window.removeEventListener("resize", handleResize);
       renderer.dispose();
     };
-  }, [onComplete]);
+  }, [onComplete, introTexts.length]);
 
   return (
     <div className="fixed inset-0 bg-black">

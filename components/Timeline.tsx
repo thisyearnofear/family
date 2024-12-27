@@ -32,7 +32,7 @@ const Timeline: React.FC<TimelineProps> = ({ images }) => {
             Welcome to Your Memory Journey
           </h1>
           <p className="text-lg text-gray-300 mb-8">
-            You've been sent an interactive gift experience. Choose your
+            You&apos;ve been sent an interactive gift experience. Choose your
             preferred style below to begin exploring your memories.
           </p>
         </div>

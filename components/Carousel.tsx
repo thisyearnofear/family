@@ -16,7 +16,7 @@ export default function Carousel({
   const [, setLastViewedPhoto] = useLastViewedPhoto();
 
   function closeModal() {
-    setLastViewedPhoto(currentPhoto.id);
+    setLastViewedPhoto(currentPhoto.id.toString());
     router.push("/", undefined, { shallow: true });
   }
 
@@ -28,6 +28,10 @@ export default function Carousel({
     closeModal();
   });
 
+  // Default blur data URL for fallback
+  const defaultBlurDataUrl =
+    "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx4eHRoaHSQtJSEkMjU1MC0yMjY2NTQ+Pj1APz42PT1EPkJBRE5LT0xVVVVBRkVOSj//2wBDAR";
+
   return (
     <div className="fixed inset-0 flex items-center justify-center">
       <button
@@ -35,7 +39,7 @@ export default function Carousel({
         onClick={closeModal}
       >
         <Image
-          src={currentPhoto.blurDataUrl}
+          src={currentPhoto.blurDataUrl || defaultBlurDataUrl}
           className="pointer-events-none h-full w-full"
           alt="blurred background"
           fill

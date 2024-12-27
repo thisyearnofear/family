@@ -29,7 +29,7 @@ class ErrorBoundary extends React.Component<Props, State> {
           <div className="text-center">
             <h2 className="text-2xl font-bold mb-4">Something went wrong</h2>
             <p className="mb-4">
-              Don't worry, your memories are safe! Try refreshing the page.
+              Don&apos;t worry, your memories are safe! Try refreshing the page.
             </p>
             <button
               onClick={() => window.location.reload()}

@@ -79,6 +79,9 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Store ref value in variable for cleanup
+    const currentRef = containerRef.current;
+
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -89,7 +92,7 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
     cameraRef.current = camera;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    containerRef.current.appendChild(renderer.domElement);
+    currentRef.appendChild(renderer.domElement);
 
     // Stars setup with different layers for parallax effect
     const createStarLayer = (count: number, size: number, depth: number) => {
@@ -177,8 +180,8 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
 
     // Cleanup
     return () => {
-      if (containerRef.current?.contains(renderer.domElement)) {
-        containerRef.current.removeChild(renderer.domElement);
+      if (currentRef?.contains(renderer.domElement)) {
+        currentRef.removeChild(renderer.domElement);
       }
       cancelAnimationFrame(frame);
       renderer.dispose();
@@ -406,7 +409,7 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
             )}
           </div>
           <div className="text-blue-200 text-sm">
-            Now Playing: "Hopes and Dreams" by Papa
+            Now Playing: &quot;Hopes and Dreams&quot; by Papa
           </div>
         </motion.div>
       </div>
