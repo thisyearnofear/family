@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 import useSound from "use-sound";
 import { AnimatedContainer } from "./AnimatedContainer";
@@ -19,21 +19,52 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [volume, setVolume] = useState(0.5);
+  const [hasCompletedFirstView, setHasCompletedFirstView] = useState(false);
 
-  // Sound setup
+  // Sound setup with sprite to prevent audio gaps
   const [play, { pause, sound }] = useSound("/sounds/background-music.mp3", {
     volume,
     loop: true,
+    interrupt: false,
+    html5: true, // This helps with mobile playback
   });
 
-  useEffect(() => {
-    if (isPlaying) play();
-    else pause();
-    return () => pause();
-  }, [isPlaying, play, pause]);
+  // Memoized play/pause handlers
+  const handlePlay = useCallback(() => {
+    try {
+      play();
+    } catch (error) {
+      console.error("Error playing audio:", error);
+    }
+  }, [play]);
 
+  const handlePause = useCallback(() => {
+    try {
+      pause();
+    } catch (error) {
+      console.error("Error pausing audio:", error);
+    }
+  }, [pause]);
+
+  // Handle play/pause
   useEffect(() => {
-    if (sound) sound.volume(volume);
+    if (isPlaying) {
+      handlePlay();
+    } else {
+      handlePause();
+    }
+    return () => handlePause();
+  }, [isPlaying, handlePlay, handlePause]);
+
+  // Handle volume changes
+  useEffect(() => {
+    if (sound) {
+      try {
+        sound.volume(volume);
+      } catch (error) {
+        console.error("Error setting volume:", error);
+      }
+    }
   }, [volume, sound]);
 
   // Auto-advance timer
@@ -44,6 +75,7 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
       setCurrentIndex((prev) => {
         if (prev >= images.length - 1) {
           setIsPlaying(false);
+          setHasCompletedFirstView(true);
           return prev;
         }
         return prev + 1;
@@ -54,9 +86,9 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
   }, [isPlaying, showIntro, images.length]);
 
   // Handle intro completion
-  const handleIntroComplete = () => {
+  const handleIntroComplete = useCallback(() => {
     setShowIntro(false);
-  };
+  }, []);
 
   if (showIntro) {
     return <JapaneseIntro onComplete={handleIntroComplete} />;
@@ -85,7 +117,7 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
         showPrevious={currentIndex > 0}
         showNext={currentIndex < images.length - 1}
         currentTrack='"Hopes and Dreams" by Papa'
-        firstView={showIntro}
+        firstView={!hasCompletedFirstView}
       />
     </div>
   );

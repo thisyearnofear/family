@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSound from "use-sound";
 import * as THREE from "three";
@@ -31,16 +31,46 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
   const [play, { pause, sound }] = useSound("/sounds/background-music.mp3", {
     volume,
     loop: true,
+    interrupt: false,
+    html5: true,
   });
 
-  useEffect(() => {
-    if (isPlaying) play();
-    else pause();
-    return () => pause();
-  }, [isPlaying, play, pause]);
+  // Memoized play/pause handlers
+  const handlePlay = useCallback(() => {
+    try {
+      play();
+    } catch (error) {
+      console.error("Error playing audio:", error);
+    }
+  }, [play]);
 
+  const handlePause = useCallback(() => {
+    try {
+      pause();
+    } catch (error) {
+      console.error("Error pausing audio:", error);
+    }
+  }, [pause]);
+
+  // Handle play/pause
   useEffect(() => {
-    if (sound) sound.volume(volume);
+    if (isPlaying) {
+      handlePlay();
+    } else {
+      handlePause();
+    }
+    return () => handlePause();
+  }, [isPlaying, handlePlay, handlePause]);
+
+  // Handle volume changes
+  useEffect(() => {
+    if (sound) {
+      try {
+        sound.volume(volume);
+      } catch (error) {
+        console.error("Error setting volume:", error);
+      }
+    }
   }, [volume, sound]);
 
   // Auto-advance timer

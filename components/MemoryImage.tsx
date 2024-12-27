@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { useState } from "react";
 import type { ImageProps } from "../utils/types";
 
 interface MemoryImageProps {
@@ -14,9 +15,16 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
   isInteractive = false,
   onLoad,
 }) => {
+  const [error, setError] = useState(false);
+
+  // Fallback to default gateway if environment variable is not set
+  const gateway =
+    process.env.NEXT_PUBLIC_PINATA_GATEWAY || "https://gateway.pinata.cloud";
+  const imageUrl = `${gateway}/ipfs/${image.ipfsHash}`;
+
   return (
     <Image
-      src={`https://gateway.pinata.cloud/ipfs/${image.ipfsHash}`}
+      src={imageUrl}
       alt={image.name || "A cherished memory"}
       className={className}
       fill
@@ -26,6 +34,10 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
       }}
       priority={true}
       onLoad={onLoad}
+      onError={() => {
+        console.error(`Failed to load image: ${imageUrl}`);
+        setError(true);
+      }}
     />
   );
 };
