@@ -229,9 +229,10 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
               onNext={() =>
                 setCurrentIndex((prev) => Math.min(images.length - 1, prev + 1))
               }
-              canGoPrevious={currentIndex > 0}
-              canGoNext={currentIndex < images.length - 1}
+              showPrevious={currentIndex > 0}
+              showNext={currentIndex < images.length - 1}
               currentTrack='"Hopes and Dreams" by Papa'
+              firstView={showIntro}
             />
           </>
         )}

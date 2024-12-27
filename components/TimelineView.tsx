@@ -137,8 +137,8 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onComplete }) => {
         setVolume={(vol) => dispatch({ type: "SET_VOLUME", payload: vol })}
         onPrevious={() => dispatch({ type: "PREVIOUS_IMAGE" })}
         onNext={() => dispatch({ type: "NEXT_IMAGE" })}
-        canGoPrevious={currentIndex > 0}
-        canGoNext={currentIndex < allImages.length - 1}
+        showPrevious={currentIndex > 0}
+        showNext={currentIndex < allImages.length - 1}
         currentTrack='"Hopes and Dreams" by Papa'
       />
     </div>

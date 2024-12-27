@@ -8,13 +8,19 @@ import {
   PencilSquareIcon,
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
+import { uploadPhotos } from "../utils/uploadPhotos";
+import { createGift } from "../utils/gifts";
+import type { ImageProps } from "../utils/types";
+import type { Gift } from "../utils/gifts";
 
 interface CreateGiftFlowProps {
   onClose: () => void;
   onComplete: (data: {
     theme: "space" | "japanese";
     messages: string[];
-    photos: File[];
+    photos: ImageProps[];
+    giftId: string;
+    password?: string;
   }) => void;
 }
 
@@ -31,6 +37,9 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
     "Let's explore these moments together...",
   ]);
   const [photos, setPhotos] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [password, setPassword] = useState("");
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setPhotos((prev) => [...prev, ...acceptedFiles]);
@@ -51,9 +60,46 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
     });
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (!theme) return;
-    onComplete({ theme, messages, photos });
+    setIsUploading(true);
+
+    try {
+      // Generate a temporary ID for the gift group
+      const tempId = Math.random().toString(36).substring(7);
+
+      // Upload photos to Pinata
+      const totalPhotos = photos.length;
+      const uploadedPhotos = [];
+
+      for (let i = 0; i < photos.length; i++) {
+        const results = await uploadPhotos([photos[i]], tempId);
+        uploadedPhotos.push(...results);
+        setUploadProgress(((i + 1) / totalPhotos) * 100);
+      }
+
+      // Create the gift
+      const gift = createGift({
+        theme,
+        messages,
+        photos: uploadedPhotos,
+        password: password || undefined,
+        groupId: uploadedPhotos[0].groupId, // All photos will be in the same group
+      });
+
+      onComplete({
+        theme,
+        messages,
+        photos: uploadedPhotos,
+        giftId: gift.id,
+        password: password || undefined,
+      });
+    } catch (error) {
+      console.error("Error creating gift:", error);
+      // TODO: Show error message to user
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -93,7 +139,7 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
               >
                 <SparklesIcon className="w-12 h-12 text-blue-500" />
                 <div className="text-center">
-                  <h3 className="font-bold text-gray-900">Space Theme</h3>
+                  <h3 className="font-bold text-gray-900">Space</h3>
                   <p className="text-sm text-gray-600">
                     A cosmic journey through the stars
                   </p>
@@ -108,15 +154,19 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
                     : "border-gray-200 hover:border-red-200 hover:bg-gray-50"
                 }`}
               >
-                <Image
-                  src="/images/zen.svg"
-                  width={48}
-                  height={48}
-                  alt="Zen"
-                  className="text-red-500"
-                />
+                <svg
+                  className="w-12 h-12 text-red-500"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path d="M12 3c-1.5 0-2.7 1.2-2.7 2.7 0 1.5 1.2 2.7 2.7 2.7s2.7-1.2 2.7-2.7C14.7 4.2 13.5 3 12 3z" />
+                  <path d="M12 10.4c-2.3 0-4.2 1.9-4.2 4.2s1.9 4.2 4.2 4.2 4.2-1.9 4.2-4.2-1.9-4.2-4.2-4.2z" />
+                  <path d="M12 20.6c-3.1 0-5.6-2.5-5.6-5.6s2.5-5.6 5.6-5.6 5.6 2.5 5.6 5.6-2.5 5.6-5.6 5.6z" />
+                </svg>
                 <div className="text-center">
-                  <h3 className="font-bold text-gray-900">Zen Garden Theme</h3>
+                  <h3 className="font-bold text-gray-900">Zen</h3>
                   <p className="text-sm text-gray-600">
                     A peaceful journey through memories
                   </p>
@@ -195,6 +245,36 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Password Protection (Optional)
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter a password to protect your gift..."
+                />
+                <p className="text-sm text-gray-500">
+                  Leave blank for public access
+                </p>
+              </div>
+
+              {isUploading && (
+                <div className="space-y-2">
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600 text-center">
+                    Uploading photos... {Math.round(uploadProgress)}%
+                  </p>
                 </div>
               )}
             </div>

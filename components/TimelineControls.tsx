@@ -3,8 +3,8 @@ import {
   SpeakerXMarkIcon as VolumeOffIcon,
   PauseIcon,
   PlayIcon,
-  ArrowLeftIcon,
-  ArrowRightIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 
 interface TimelineControlsProps {
@@ -15,9 +15,10 @@ interface TimelineControlsProps {
   setVolume: (volume: number) => void;
   onPrevious: () => void;
   onNext: () => void;
-  canGoPrevious: boolean;
-  canGoNext: boolean;
-  currentTrack: string;
+  showPrevious?: boolean;
+  showNext?: boolean;
+  firstView?: boolean;
+  currentTrack?: string;
 }
 
 const TimelineControls: React.FC<TimelineControlsProps> = ({
@@ -28,34 +29,29 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
   setVolume,
   onPrevious,
   onNext,
-  canGoPrevious,
-  canGoNext,
+  showPrevious = true,
+  showNext = true,
+  firstView = false,
   currentTrack,
 }) => {
   const isSpace = theme === "space";
-  const bgClass = isSpace
-    ? "bg-black/50 border-blue-500/30"
-    : "bg-white/50 border-stone-500/30";
+  const bgClass = isSpace ? "bg-black/50" : "bg-white/50";
   const textClass = isSpace ? "text-white" : "text-stone-800";
-  const hoverClass = isSpace ? "hover:bg-blue-900/30" : "hover:bg-stone-200/30";
 
   return (
-    <div
-      className="fixed md:right-8 md:top-1/2 md:-translate-y-1/2 md:bottom-auto md:left-auto md:translate-x-0 bottom-24 left-1/2 -translate-x-1/2 flex md:flex-col items-center gap-4"
-      style={{ zIndex: 50 }}
-    >
-      {/* Music info and controls */}
+    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 flex flex-col sm:flex-row items-center gap-4">
+      {/* Music controls */}
       <div
-        className={`px-4 py-2 rounded-full backdrop-blur-sm border ${bgClass} flex items-center md:items-center gap-3`}
+        className={`${bgClass} backdrop-blur-sm rounded-full p-4 flex items-center gap-4`}
       >
         <button
           onClick={() => setIsPlaying(!isPlaying)}
-          className={`p-2 rounded-full transition-colors ${hoverClass}`}
+          className="p-2 rounded-full hover:bg-white/10 transition-colors"
         >
           {isPlaying ? (
-            <PauseIcon className={`w-5 h-5 ${textClass}`} />
+            <PauseIcon className={`w-6 h-6 ${textClass}`} />
           ) : (
-            <PlayIcon className={`w-5 h-5 ${textClass}`} />
+            <PlayIcon className={`w-6 h-6 ${textClass}`} />
           )}
         </button>
 
@@ -78,31 +74,37 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
           )}
         </div>
 
-        <div className={`text-sm ${textClass} hidden lg:block`}>
-          {currentTrack}
-        </div>
+        {currentTrack && (
+          <span className={`text-sm ${textClass} hidden sm:block`}>
+            {currentTrack}
+          </span>
+        )}
       </div>
 
       {/* Navigation controls */}
-      <div
-        className={`px-4 py-2 rounded-full backdrop-blur-sm border ${bgClass} flex md:flex-col items-center gap-3`}
-      >
-        <button
-          onClick={onPrevious}
-          disabled={!canGoPrevious}
-          className={`p-2 rounded-full transition-colors ${hoverClass} disabled:opacity-50 disabled:cursor-not-allowed`}
+      {!firstView && (showPrevious || showNext) && (
+        <div
+          className={`${bgClass} backdrop-blur-sm rounded-full p-4 flex items-center gap-4`}
         >
-          <ArrowLeftIcon className={`w-5 h-5 ${textClass} md:rotate-90`} />
-        </button>
+          {showPrevious && (
+            <button
+              onClick={onPrevious}
+              className="p-2 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <ChevronLeftIcon className={`w-6 h-6 ${textClass}`} />
+            </button>
+          )}
 
-        <button
-          onClick={onNext}
-          disabled={!canGoNext}
-          className={`p-2 rounded-full transition-colors ${hoverClass} disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          <ArrowRightIcon className={`w-5 h-5 ${textClass} md:rotate-90`} />
-        </button>
-      </div>
+          {showNext && (
+            <button
+              onClick={onNext}
+              className="p-2 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <ChevronRightIcon className={`w-6 h-6 ${textClass}`} />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

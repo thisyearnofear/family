@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/router";
 import MemoryImage from "./MemoryImage";
 import type { ImageProps } from "../utils/types";
 import CreateGiftFlow from "./CreateGiftFlow";
+import PhotoViewer from "./PhotoViewer";
 
 interface MonthlyViewProps {
   images: ImageProps[];
@@ -19,6 +20,10 @@ interface MonthData {
   startIndex: number;
 }
 
+interface LoadingState {
+  [key: string]: boolean;
+}
+
 const MonthlyView: React.FC<MonthlyViewProps> = ({
   images,
   currentIndex,
@@ -27,6 +32,9 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
 }) => {
   const router = useRouter();
   const [showCreateGift, setShowCreateGift] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<ImageProps | null>(null);
+  const [loadingStates, setLoadingStates] = useState<LoadingState>({});
+  const [carouselIndex, setCarouselIndex] = useState(0);
 
   // Group images by month
   const monthlyData = useMemo(() => {
@@ -70,12 +78,77 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     return months;
   }, [images]);
 
-  // Find current month
-  const currentMonth = monthlyData.find(
+  // Find current month and next month
+  const currentMonthIndex = monthlyData.findIndex(
     (month) =>
       currentIndex >= month.startIndex &&
       currentIndex < month.startIndex + month.images.length
   );
+
+  const currentMonth = monthlyData[currentMonthIndex];
+  const nextMonth = monthlyData[currentMonthIndex + 1];
+
+  // Preload next month's images
+  useEffect(() => {
+    if (!nextMonth) return;
+
+    // Mark next month as loading
+    setLoadingStates((prev) => ({
+      ...prev,
+      [nextMonth.key]: true,
+    }));
+
+    // Preload all images in the next month
+    const preloadPromises = nextMonth.images.map((image) => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.src = `https://gateway.pinata.cloud/ipfs/${image.ipfsHash}`;
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+      });
+    });
+
+    Promise.all(preloadPromises).then(() => {
+      setLoadingStates((prev) => ({
+        ...prev,
+        [nextMonth.key]: false,
+      }));
+    });
+  }, [nextMonth]);
+
+  // Handle image load completion
+  const handleImageLoad = useCallback(
+    (monthKey: string, imageIndex: number, totalImages: number) => {
+      if (imageIndex === totalImages - 1) {
+        setLoadingStates((prev) => ({
+          ...prev,
+          [monthKey]: false,
+        }));
+      }
+    },
+    []
+  );
+
+  // Loading carousel effect
+  useEffect(() => {
+    if (
+      !currentMonth ||
+      currentMonth.images.length <= 1 ||
+      !loadingStates[currentMonth.key]
+    )
+      return;
+
+    const interval = setInterval(() => {
+      setCarouselIndex((prev) => (prev + 1) % currentMonth.images.length);
+    }, 800);
+
+    return () => clearInterval(interval);
+  }, [currentMonth, loadingStates]);
+
+  // Reset carousel index when month changes
+  useEffect(() => {
+    setCarouselIndex(0);
+  }, [currentMonth?.key]);
 
   // Check if we're at the end
   const isLastImage = currentIndex === images.length - 1;
@@ -205,7 +278,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     );
   }
 
-  // Render month collage
+  // Render monthly collage
   return (
     <AnimatePresence mode="wait">
       {currentMonth && (
@@ -214,7 +287,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="w-full h-full flex flex-col items-center justify-center p-4 gap-4"
+          className="w-full h-full flex flex-col items-center p-4 gap-4"
         >
           <h2
             className={`text-2xl ${
@@ -223,21 +296,67 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
           >
             {currentMonth.month}
           </h2>
-          <div className="w-full max-w-6xl grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-            {currentMonth.images.map((image, idx) => (
-              <div
-                key={image.ipfsHash}
-                className="relative aspect-square cursor-pointer"
-                onClick={() => onImageClick?.(currentMonth.startIndex + idx)}
-              >
-                <MemoryImage
-                  image={image}
-                  isInteractive
-                  className="rounded-lg shadow-md"
-                />
+
+          {/* Loading indicator with carousel */}
+          {loadingStates[currentMonth.key] &&
+            currentMonth.images.length > 1 && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
+                <div className="w-full max-w-2xl aspect-[3/2] relative mb-8">
+                  <motion.div
+                    key={carouselIndex}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0"
+                  >
+                    <MemoryImage
+                      image={currentMonth.images[carouselIndex]}
+                      className="rounded-lg shadow-xl opacity-75"
+                    />
+                  </motion.div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                  <span className="text-white text-lg">Loading...</span>
+                </div>
               </div>
-            ))}
+            )}
+
+          {/* Scrollable gallery */}
+          <div className="w-full max-w-6xl flex-1 overflow-y-auto">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+              {currentMonth.images.map((image, idx) => (
+                <div
+                  key={image.ipfsHash}
+                  className="relative aspect-square cursor-pointer group"
+                  onClick={() => setSelectedImage(image)}
+                >
+                  <MemoryImage
+                    image={image}
+                    isInteractive
+                    className="rounded-lg shadow-md transition-transform group-hover:scale-105"
+                    onLoad={() =>
+                      handleImageLoad(
+                        currentMonth.key,
+                        idx,
+                        currentMonth.images.length
+                      )
+                    }
+                  />
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Photo viewer */}
+          <AnimatePresence>
+            {selectedImage && (
+              <PhotoViewer
+                image={selectedImage}
+                onClose={() => setSelectedImage(null)}
+              />
+            )}
+          </AnimatePresence>
         </motion.div>
       )}
     </AnimatePresence>

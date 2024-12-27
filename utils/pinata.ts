@@ -16,37 +16,23 @@ export interface IPFSImage {
   dateTaken?: string;
 }
 
-interface PinResponse {
-  IpfsHash: string;
-  PinSize: number;
-  Timestamp: string;
-}
+export async function pinFileToIPFS(file: File): Promise<{ IpfsHash: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
 
-export async function uploadToPinata(file: Buffer, fileName: string) {
-  try {
-    const formData = new FormData();
-    formData.append("file", file, {
-      filename: fileName,
-      contentType: "image/jpeg",
-    });
+  const response = await axios.post(
+    "https://api.pinata.cloud/pinning/pinFileToIPFS",
+    formData,
+    {
+      headers: {
+        ...formData.getHeaders?.(),
+        Authorization: `Bearer ${process.env.PINATA_JWT}`,
+      },
+      maxContentLength: Infinity,
+    }
+  );
 
-    const response = await axios.post(
-      "https://api.pinata.cloud/pinning/pinFileToIPFS",
-      formData,
-      {
-        headers: {
-          ...formData.getHeaders(),
-          Authorization: `Bearer ${process.env.PINATA_JWT}`,
-        },
-        maxContentLength: Infinity,
-      }
-    );
-
-    return response.data.IpfsHash;
-  } catch (error) {
-    console.error("Error uploading to Pinata:", error);
-    throw error;
-  }
+  return response.data;
 }
 
 export async function getImages(groupId?: string): Promise<IPFSImage[]> {
@@ -67,7 +53,7 @@ export async function getImages(groupId?: string): Promise<IPFSImage[]> {
         dateTaken: image.dateTaken,
       }));
     } else {
-      // Fallback to listing all files if no group ID provided
+      // List all files in the account
       const response = await axios.get(
         "https://api.pinata.cloud/data/pinList",
         {
@@ -97,5 +83,83 @@ export async function getImages(groupId?: string): Promise<IPFSImage[]> {
   } catch (error) {
     console.error("Error fetching from Pinata:", error);
     return [];
+  }
+}
+
+export async function createGiftGroup(giftId: string) {
+  try {
+    return await pinata.groups.create({
+      name: `gift-${giftId}`,
+    });
+  } catch (error) {
+    console.error("Error creating gift group:", error);
+    throw error;
+  }
+}
+
+export async function addFilesToGroup(groupId: string, cids: string[]) {
+  try {
+    await pinata.groups.addCids({
+      groupId,
+      cids,
+    });
+  } catch (error) {
+    console.error("Error adding files to group:", error);
+    throw error;
+  }
+}
+
+// For one-time viewing, we can delete the group after it's been viewed
+export async function deleteGiftGroup(groupId: string) {
+  try {
+    await pinata.groups.delete({
+      groupId,
+    });
+  } catch (error) {
+    console.error("Error deleting gift group:", error);
+    throw error;
+  }
+}
+
+export interface CreateGiftCollection {
+  photos: {
+    ipfsHash: string;
+    name: string;
+    dateTaken?: string;
+  }[];
+  metadata?: {
+    theme?: "space" | "japanese";
+    messages?: string[];
+  };
+}
+
+export async function createGiftCollection(data: CreateGiftCollection) {
+  try {
+    // Create a JSON file with the collection data
+    const formData = new FormData();
+    const blob = new Blob(
+      [JSON.stringify({ images: data.photos, ...data.metadata })],
+      {
+        type: "application/json",
+      }
+    );
+    formData.append("file", blob, "collection.json");
+
+    // Upload the collection JSON to IPFS
+    const response = await axios.post(
+      "https://api.pinata.cloud/pinning/pinFileToIPFS",
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders?.(),
+          Authorization: `Bearer ${process.env.PINATA_JWT}`,
+        },
+      }
+    );
+
+    return response.data.IpfsHash;
+  } catch (error) {
+    console.error("Error creating gift collection:", error);
+    throw error;
   }
 }
