@@ -265,13 +265,16 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     setHighlightedImage(image);
   };
 
-  // Calculate if we should show the review stage
-  const shouldShowReview = useMemo(() => {
-    const lastMonth = monthlyData[monthlyData.length - 2]; // -2 because -1 is the review stage
+  // Calculate if we should show the gallery
+  const shouldShowGallery = useMemo(() => {
+    const lastMonth = monthlyData[monthlyData.length - 2]; // -2 because -1 is the gallery
     if (!lastMonth) return false;
 
-    return currentIndex >= lastMonth.startIndex + lastMonth.images.length;
-  }, [monthlyData, currentIndex]);
+    return (
+      currentIndex >= lastMonth.startIndex + lastMonth.images.length ||
+      currentMonth?.key === "gallery"
+    );
+  }, [monthlyData, currentIndex, currentMonth]);
 
   // Render timeline controls with highlight toggle
   const renderTimelineControls = () => {
@@ -323,7 +326,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
   };
 
   // Check if we're in the gallery stage
-  const isGalleryStage = currentMonth?.key === "gallery";
+  const isGalleryStage = shouldShowGallery;
 
   // Add loading indicator for final collage
   const renderLoadingIndicator = () => {
@@ -598,6 +601,9 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
           ))}
         </div>
       </motion.div>
+
+      {/* Timeline Controls */}
+      {renderTimelineControls()}
 
       {/* Highlighted Image Overlay */}
       <AnimatePresence>
