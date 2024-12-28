@@ -54,7 +54,7 @@ const Collage: React.FC<CollageProps> = ({ images, theme = "space" }) => {
           >
             <Image
               src={`${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${image.ipfsHash}`}
-              alt={image.dateModified || "Memory"}
+              alt={image.dateTaken || "Memory"}
               fill
               className={`object-cover transition-transform duration-500 group-hover:scale-105 ${
                 theme === "space" ? "rounded-lg" : ""
@@ -74,7 +74,7 @@ const Collage: React.FC<CollageProps> = ({ images, theme = "space" }) => {
                   theme === "japanese" ? "font-japanese" : "font-bold"
                 }`}
               >
-                {new Date(image.dateModified || "").toLocaleDateString(
+                {new Date(image.dateTaken || "").toLocaleDateString(
                   theme === "japanese" ? "ja-JP" : "en-US",
                   theme === "japanese"
                     ? undefined

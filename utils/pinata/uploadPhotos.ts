@@ -38,16 +38,15 @@ export async function uploadPhotos(
   for (const file of sortedFiles) {
     try {
       // Try to get the date in this order:
-      // 1. File's lastModified date
-      // 2. Date from filename
+      // 1. Date from filename
+      // 2. File's lastModified date
       // 3. Current date as fallback
-      let dateModified = new Date(file.lastModified).toISOString();
-      const dateFromName = extractDateFromFileName(file.name);
-      if (!dateModified && dateFromName) {
-        dateModified = new Date(dateFromName).toISOString();
+      let dateTaken = extractDateFromFileName(file.name);
+      if (!dateTaken) {
+        dateTaken = new Date(file.lastModified).toISOString();
       }
-      if (!dateModified) {
-        dateModified = new Date().toISOString();
+      if (!dateTaken) {
+        dateTaken = new Date().toISOString();
       }
 
       // Upload to Pinata
@@ -58,10 +57,12 @@ export async function uploadPhotos(
         id: results.length,
         ipfsHash: IpfsHash,
         name: file.name,
-        dateModified,
+        dateTaken,
+        dateModified: new Date(file.lastModified).toISOString(),
         width: 1280, // Default width
         height: 720, // Default height
         groupId,
+        description: null,
       });
     } catch (error) {
       console.error("Error uploading photo:", error);

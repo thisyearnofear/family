@@ -4,7 +4,8 @@ export interface ImageProps {
   ipfsHash: string;
   width: number;
   height: number;
-  dateModified: string; // ISO date string
+  dateTaken: string; // ISO date string
+  dateModified?: string; // ISO date string (optional)
   name: string;
   blurDataUrl?: string;
   description: string | null;

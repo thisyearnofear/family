@@ -143,17 +143,15 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
 
     // Sort images by date
     const sortedImages = [...images].sort((a, b) => {
-      if (!a.dateModified || !b.dateModified) return 0;
-      return (
-        new Date(a.dateModified).getTime() - new Date(b.dateModified).getTime()
-      );
+      if (!a.dateTaken || !b.dateTaken) return 0;
+      return new Date(a.dateTaken).getTime() - new Date(b.dateTaken).getTime();
     });
 
     // Group by month
     sortedImages.forEach((image) => {
-      if (!image.dateModified) return;
+      if (!image.dateTaken) return;
 
-      const date = new Date(image.dateModified);
+      const date = new Date(image.dateTaken);
       const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
       const monthName = date.toLocaleString("default", {
         month: "long",
@@ -664,71 +662,155 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
       {currentMonth && (
         <motion.div
           key={currentMonth.key}
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, scale: 0.98, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: -20 }}
+          exit={{ opacity: 0, scale: 0.98, y: -20 }}
           transition={{
-            duration: MONTH_TRANSITION_DURATION,
-            ease: "easeInOut",
+            type: "spring",
+            stiffness: 300,
+            damping: 30,
+            duration: 0.5,
           }}
           className="w-full h-full flex flex-col items-center p-4 gap-4"
         >
-          <h2
+          <motion.h2
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ delay: 0.2 }}
             className={`text-2xl ${
               theme === "space" ? "text-white" : "font-japanese text-stone-800"
             }`}
           >
             {currentMonth.month}
-          </h2>
+          </motion.h2>
 
           {/* Loading indicator with carousel */}
-          {loadingStates[currentMonth.key]?.isLoading &&
-            currentMonth.images.length > 1 && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
-                <div className="w-full max-w-2xl h-[40vh] relative mb-8">
+          <AnimatePresence>
+            {loadingStates[currentMonth.key]?.isLoading &&
+              currentMonth.images.length > 1 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm"
+                >
                   <motion.div
-                    key={carouselIndex}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0"
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0.9 }}
+                    className="w-full max-w-2xl h-[40vh] relative mb-8"
                   >
-                    <MemoryImage
-                      image={currentMonth.images[carouselIndex]}
-                      className="rounded-lg shadow-xl opacity-75"
-                    />
-                  </motion.div>
-                </div>
-                <div className="flex flex-col items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                    <span className="text-white text-lg">
-                      Loading...{" "}
-                      {loadingStates[currentMonth.key]?.loadedCount || 0}/
-                      {loadingStates[currentMonth.key]?.totalCount || 0}
-                    </span>
-                  </div>
-                  <div className="w-64 h-2 bg-white/20 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-white transition-all duration-300"
-                      style={{
-                        width: `${
-                          ((loadingStates[currentMonth.key]?.loadedCount || 0) /
-                            (loadingStates[currentMonth.key]?.totalCount ||
-                              1)) *
-                          100
-                        }%`,
+                    <motion.div
+                      key={carouselIndex}
+                      initial={{ opacity: 0, x: 100 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -100 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 30,
                       }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
+                      className="absolute inset-0"
+                    >
+                      <MemoryImage
+                        image={currentMonth.images[carouselIndex]}
+                        className="rounded-lg shadow-xl opacity-75"
+                      />
+                    </motion.div>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col items-center gap-4"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                      <span className="text-white text-lg">
+                        Loading...{" "}
+                        {loadingStates[currentMonth.key]?.loadedCount || 0}/
+                        {loadingStates[currentMonth.key]?.totalCount || 0}
+                      </span>
+                    </div>
+                    <div className="w-64 h-2 bg-white/20 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-white"
+                        initial={{ width: "0%" }}
+                        animate={{
+                          width: `${
+                            ((loadingStates[currentMonth.key]?.loadedCount ||
+                              0) /
+                              (loadingStates[currentMonth.key]?.totalCount ||
+                                1)) *
+                            100
+                          }%`,
+                        }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+          </AnimatePresence>
 
-          {/* Scrollable gallery */}
-          <div className="w-full max-w-6xl flex-1 overflow-y-auto">
-            {renderPhotoGrid()}
-          </div>
+          {/* Scrollable gallery with staggered animations */}
+          <motion.div
+            className="w-full max-w-6xl flex-1 overflow-y-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+              {currentMonth?.images.map((image, idx) => (
+                <motion.div
+                  key={image.ipfsHash}
+                  initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{
+                    delay: idx * 0.1,
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                  }}
+                  className="relative aspect-square h-[200px] cursor-pointer group"
+                  onClick={() => setHighlightedImage(image)}
+                >
+                  <div
+                    className={`absolute inset-0 z-10 transition-opacity duration-500 ${
+                      focusedIndex === idx ? "opacity-100" : "opacity-0"
+                    }`}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                    {theme === "japanese" ? (
+                      <div className="absolute bottom-2 left-2 text-white text-sm font-japanese">
+                        思い出 {idx + 1}
+                      </div>
+                    ) : (
+                      <div className="absolute bottom-2 left-2 text-white text-sm">
+                        Memory {idx + 1}
+                      </div>
+                    )}
+                  </div>
+                  <MemoryImage
+                    image={image}
+                    isInteractive
+                    className={`rounded-lg shadow-md transition-all duration-500 ${
+                      focusedIndex === idx
+                        ? "shadow-lg ring-2 ring-white/30"
+                        : "group-hover:scale-105"
+                    }`}
+                    onLoad={() =>
+                      handleImageLoad(
+                        currentMonth.key,
+                        idx,
+                        currentMonth.images.length
+                      )
+                    }
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
 
           {/* Highlighted image overlay */}
           <AnimatePresence>{renderHighlightedImage()}</AnimatePresence>

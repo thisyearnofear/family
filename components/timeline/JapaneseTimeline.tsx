@@ -68,16 +68,14 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images }) => {
     let currentStartIndex = 0;
 
     const sortedImages = [...images].sort((a, b) => {
-      if (!a.dateModified || !b.dateModified) return 0;
-      return (
-        new Date(a.dateModified).getTime() - new Date(b.dateModified).getTime()
-      );
+      if (!a.dateTaken || !b.dateTaken) return 0;
+      return new Date(a.dateTaken).getTime() - new Date(b.dateTaken).getTime();
     });
 
     sortedImages.forEach((image) => {
-      if (!image.dateModified) return;
+      if (!image.dateTaken) return;
 
-      const date = new Date(image.dateModified);
+      const date = new Date(image.dateTaken);
       const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
       const monthName = date.toLocaleString("default", {
         month: "long",

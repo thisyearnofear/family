@@ -65,12 +65,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       console.warn("No images returned from Pinata");
     }
 
-    // Sort images by dateModified
+    // Sort images by dateTaken
     const sortedImages = [...images].sort((a, b) => {
-      if (!a.dateModified || !b.dateModified) return 0;
-      return (
-        new Date(a.dateModified).getTime() - new Date(b.dateModified).getTime()
-      );
+      if (!a.dateTaken || !b.dateTaken) return 0;
+      return new Date(a.dateTaken).getTime() - new Date(b.dateTaken).getTime();
     });
     console.log("Sorted images count:", sortedImages.length);
     console.log("=== SERVER SIDE PROPS END ===");

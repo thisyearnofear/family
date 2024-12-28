@@ -27,8 +27,8 @@ const LazyImage = ({ image, className = "", onLoad }: LazyImageProps) => {
       <Image
         src={src}
         alt={
-          image.dateModified
-            ? new Date(image.dateModified).toLocaleDateString()
+          image.dateTaken
+            ? new Date(image.dateTaken).toLocaleDateString()
             : "Memory"
         }
         fill

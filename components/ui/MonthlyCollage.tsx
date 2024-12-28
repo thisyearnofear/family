@@ -117,7 +117,7 @@ const MonthlyCollage: React.FC<MonthlyCollageProps> = ({
               >
                 <Image
                   src={`${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${image.ipfsHash}`}
-                  alt={image.dateModified || "Memory"}
+                  alt={image.dateTaken || "Memory"}
                   fill
                   className="object-cover transition-transform hover:scale-105"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

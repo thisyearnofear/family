@@ -238,22 +238,28 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                 <button
                   onClick={onPreviousMonth}
                   disabled={!showPreviousMonth}
-                  className={`p-2 rounded-full transition-colors ${
+                  className={`p-2 rounded-full transition-all duration-300 ${
                     showPreviousMonth ? hoverClass : disabledClass
                   }`}
                 >
                   <MdNavigateBefore className={textClass} size={28} />
                 </button>
-                <span className={`text-lg font-medium ${textClass}`}>
+                <motion.span
+                  key={currentMonth}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className={`text-lg font-medium ${textClass} min-w-[200px] text-center`}
+                >
                   {currentMonth}
-                </span>
+                </motion.span>
                 <div className="relative">
                   <button
                     onClick={onNextMonth}
                     disabled={!showNextMonth}
-                    className={`p-2 rounded-full transition-colors ${
+                    className={`p-2 rounded-full transition-all duration-300 ${
                       showNextMonth ? hoverClass : disabledClass
-                    }`}
+                    } ${showReadyIndicator ? "scale-110" : ""}`}
                   >
                     <MdNavigateNext
                       className={`${textClass} transition-colors duration-500 ${
@@ -267,10 +273,12 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                     />
                   </button>
 
-                  {/* Loading progress circle */}
+                  {/* Loading progress circle with smoother animation */}
                   {nextMonthLoadingProgress > 0 &&
                     nextMonthLoadingProgress < 100 && (
-                      <svg
+                      <motion.svg
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
                         className="absolute inset-0 -m-1 w-[calc(100%+8px)] h-[calc(100%+8px)] rotate-[-90deg]"
                         viewBox="0 0 100 100"
                       >
@@ -282,7 +290,7 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                           stroke={`${accentColor}33`}
                           strokeWidth="2"
                         />
-                        <circle
+                        <motion.circle
                           cx="50"
                           cy="50"
                           r="45"
@@ -290,12 +298,17 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                           stroke={accentColor}
                           strokeWidth="2"
                           strokeLinecap="round"
-                          strokeDasharray={`${
-                            nextMonthLoadingProgress * 2.83
-                          }, 283`}
-                          className="transition-all duration-300"
+                          initial={{ pathLength: 0 }}
+                          animate={{
+                            pathLength: nextMonthLoadingProgress / 100,
+                          }}
+                          transition={{ duration: 0.3, ease: "easeInOut" }}
+                          style={{
+                            strokeDasharray: "283",
+                            strokeDashoffset: "283",
+                          }}
                         />
-                      </svg>
+                      </motion.svg>
                     )}
                 </div>
               </div>

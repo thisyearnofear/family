@@ -76,7 +76,9 @@ export const getImages = async (groupId: string): Promise<ImageProps[]> => {
           ipfsHash: image.ipfsHash,
           name: image.name || `Image ${index + 1}`,
           description: image.description || null,
-          dateModified: image.dateModified || new Date().toISOString(),
+          dateTaken:
+            image.dateTaken || image.dateModified || new Date().toISOString(),
+          dateModified: image.dateModified || null,
           width: image.width || 1280,
           height: image.height || 720,
         }));
@@ -131,7 +133,11 @@ export const getImages = async (groupId: string): Promise<ImageProps[]> => {
       ipfsHash: row.ipfs_pin_hash,
       name: row.metadata?.name || `Image ${row.ipfs_pin_hash.slice(0, 8)}`,
       description: row.metadata?.keyvalues?.description || null,
-      dateModified: row.date_pinned || new Date().toISOString(),
+      dateTaken:
+        row.metadata?.keyvalues?.dateTaken ||
+        row.date_pinned ||
+        new Date().toISOString(),
+      dateModified: row.date_pinned || null,
       width: row.metadata?.keyvalues?.width || 1280,
       height: row.metadata?.keyvalues?.height || 720,
     }));
