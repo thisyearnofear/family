@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  swcMinify: true,
+  experimental: {
+    optimizeCss: true,
+  },
   images: {
     domains: ["gateway.pinata.cloud"],
     unoptimized: true,
@@ -8,6 +12,9 @@ const nextConfig = {
   env: {
     PINATA_JWT: process.env.PINATA_JWT,
     PINATA_GROUP_ID: process.env.PINATA_GROUP_ID,
+  },
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -22,4 +29,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
