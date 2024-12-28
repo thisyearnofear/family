@@ -549,12 +549,12 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="fixed inset-0 flex flex-col items-center p-8"
+          className="fixed inset-0 flex flex-col items-center"
         >
-          <div className={`w-full max-w-6xl mx-auto flex flex-col h-full`}>
-            {/* Fixed header */}
+          {/* Fixed header with title and buttons */}
+          <div className={`w-full max-w-6xl mx-auto p-8`}>
             <div
-              className={`${bgClass} backdrop-blur-sm rounded-t-2xl p-8 border border-b-0`}
+              className={`${bgClass} backdrop-blur-sm rounded-2xl p-8 border flex flex-col items-center gap-6`}
             >
               <h2
                 className={`text-4xl font-bold text-center ${
@@ -572,13 +572,29 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
                   </>
                 )}
               </h2>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-lg">
+                <button
+                  onClick={() => router.push("/")}
+                  className={`px-6 py-3 rounded-lg text-white transition-all ${altButtonBgClass} border border-opacity-30 hover:scale-105 w-full sm:w-auto`}
+                >
+                  Start Over
+                </button>
+                <button
+                  onClick={() => setShowCreateGift(true)}
+                  className={`px-6 py-3 rounded-lg text-white transition-all ${buttonBgClass} border border-opacity-30 hover:scale-105 w-full sm:w-auto`}
+                >
+                  Create Your Own Gift
+                </button>
+              </div>
             </div>
+          </div>
 
-            {/* Scrollable photo grid */}
+          {/* Scrollable photo grid */}
+          <div className="w-full max-w-6xl flex-1 overflow-y-auto px-8 pb-8">
             <div
-              className={`${bgClass} backdrop-blur-sm flex-1 overflow-y-auto border border-y-0 relative`}
+              className={`${bgClass} backdrop-blur-sm rounded-2xl border h-full overflow-y-auto`}
             >
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-8 pb-32">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-8">
                 {images.map((image, idx) => (
                   <motion.div
                     key={image.ipfsHash}
@@ -595,26 +611,6 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
                     />
                   </motion.div>
                 ))}
-              </div>
-            </div>
-
-            {/* Fixed footer with buttons */}
-            <div
-              className={`${bgClass} backdrop-blur-sm rounded-b-2xl p-8 border border-t-0`}
-            >
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button
-                  onClick={() => router.push("/")}
-                  className={`px-6 py-3 rounded-lg text-white transition-all ${altButtonBgClass} border border-opacity-30 hover:scale-105 w-full sm:w-auto`}
-                >
-                  Start Over
-                </button>
-                <button
-                  onClick={() => setShowCreateGift(true)}
-                  className={`px-6 py-3 rounded-lg text-white transition-all ${buttonBgClass} border border-opacity-30 hover:scale-105 w-full sm:w-auto`}
-                >
-                  Create Your Own Gift
-                </button>
               </div>
             </div>
           </div>
