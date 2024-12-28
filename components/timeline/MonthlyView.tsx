@@ -143,6 +143,42 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     };
   }, []);
 
+  // Handle image load completion
+  const handleImageLoad = useCallback(
+    (monthKey: string, imageIndex: number, totalImages: number) => {
+      console.log(
+        `Image ${imageIndex + 1}/${totalImages} loaded in ${monthKey}`
+      );
+
+      setLoadingStates((prev) => {
+        const currentState = prev[monthKey] || {
+          isLoading: true,
+          loadedCount: 0,
+          totalCount: totalImages,
+        };
+
+        const newLoadedCount = Math.min(
+          currentState.loadedCount + 1,
+          totalImages
+        );
+        const newState = {
+          ...prev,
+          [monthKey]: {
+            ...currentState,
+            loadedCount: newLoadedCount,
+            isLoading: newLoadedCount < totalImages,
+          },
+        };
+
+        console.log(
+          `${monthKey} loading progress: ${newLoadedCount}/${totalImages}`
+        );
+        return newState;
+      });
+    },
+    [setLoadingStates]
+  );
+
   // Modify the preload effect to use cache
   useEffect(() => {
     if (!currentMonth) return;
@@ -210,50 +246,21 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
         img.src = imageUrl;
       });
     });
-  }, [currentMonth?.key, monthlyData, imageCache]);
-
-  // Handle image load completion
-  const handleImageLoad = useCallback(
-    (monthKey: string, imageIndex: number, totalImages: number) => {
-      console.log(
-        `Image ${imageIndex + 1}/${totalImages} loaded in ${monthKey}`
-      );
-
-      setLoadingStates((prev) => {
-        const currentState = prev[monthKey] || {
-          isLoading: true,
-          loadedCount: 0,
-          totalCount: totalImages,
-        };
-
-        const newLoadedCount = Math.min(
-          currentState.loadedCount + 1,
-          totalImages
-        );
-        const newState = {
-          ...prev,
-          [monthKey]: {
-            ...currentState,
-            loadedCount: newLoadedCount,
-            isLoading: newLoadedCount < totalImages,
-          },
-        };
-
-        console.log(
-          `${monthKey} loading progress: ${newLoadedCount}/${totalImages}`
-        );
-        return newState;
-      });
-    },
-    []
-  );
+  }, [
+    currentMonth?.key,
+    monthlyData,
+    imageCache,
+    handleImageLoad,
+    setLoadingStates,
+  ]);
 
   // Loading carousel effect
+  const loadingStateKey = currentMonth?.key ?? "";
   useEffect(() => {
     if (
       !currentMonth ||
       currentMonth.images.length <= 1 ||
-      !loadingStates[currentMonth.key]?.isLoading
+      !loadingStates[loadingStateKey]?.isLoading
     )
       return;
 
@@ -262,7 +269,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     }, 800);
 
     return () => clearInterval(interval);
-  }, [currentMonth, loadingStates]);
+  }, [currentMonth, loadingStates, loadingStateKey]);
 
   // Reset carousel index when month changes
   useEffect(() => {

@@ -55,7 +55,7 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
       const timer = setTimeout(() => setShowReadyIndicator(false), 2000);
       return () => clearTimeout(timer);
     }
-  }, [nextMonthLoadingProgress]);
+  }, [nextMonthLoadingProgress, showReadyIndicator]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[100]">
