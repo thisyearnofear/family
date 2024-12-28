@@ -31,10 +31,10 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
   const [step, setStep] = useState(1);
   const [theme, setTheme] = useState<"space" | "japanese">();
   const [messages, setMessages] = useState<string[]>([
-    "Welcome to a special journey...",
-    "A collection of cherished memories...",
-    "Each photo tells a story...",
-    "Let's explore these moments together...",
+    "Family is a constant—a center of gravity, an anchor in the cosmos.",
+    "Every memory, an imprint of love, laughter, and togetherness, etched into the universe.",
+    "Our connection transcends distance, time, and space: stars bound in an unbreakable constellation.",
+    "Love is infinite, happiness innate, take a look ....",
   ]);
   const [photos, setPhotos] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);

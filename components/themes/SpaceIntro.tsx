@@ -14,10 +14,10 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
 
   const introTexts = [
-    "Welcome to a special journey through time and space...",
-    "A collection of cherished memories, captured in the stars...",
-    "Each photo tells a story of love, laughter, and togetherness...",
-    "Let's explore these moments together...",
+    "Family is a constant—a center of gravity, an anchor in the cosmos.",
+    "Every memory, an imprint of love, laughter, and togetherness, etched into the universe.",
+    "Our connection transcends distance, time, and space: stars bound in an unbreakable constellation.",
+    "Love is infinite, happiness innate, take a look ....",
   ];
 
   useEffect(() => {
@@ -129,7 +129,7 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
       } else {
         setCurrentTextIndex((prev) => prev + 1);
       }
-    }, 3000);
+    }, 6000);
 
     return () => clearTimeout(timer);
   }, [showText, currentTextIndex, introTexts.length, onComplete]);

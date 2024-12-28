@@ -113,10 +113,10 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images }) => {
   }, [nextMonth, loadingStates]);
 
   const introTexts = [
-    "Welcome to a special journey through time and space...",
-    "A collection of cherished memories, captured in the stars...",
-    "Each photo tells a story of love, laughter, and togetherness...",
-    "Let's explore these moments together...",
+    "Family is a constant—a center of gravity, an anchor in the cosmos.",
+    "Every memory, an imprint of love, laughter, and togetherness, etched into the universe.",
+    "Our connection transcends distance, time, and space: stars bound in an unbreakable constellation.",
+    "Love is infinite, happiness innate, take a look ....",
   ];
 
   // Sound setup with proper cleanup

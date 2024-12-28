@@ -12,10 +12,10 @@ const JapaneseIntro: React.FC<JapaneseIntroProps> = ({ onComplete }) => {
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
 
   const introTexts = [
-    "Welcome to a special journey through memories...",
-    "A collection of cherished moments, captured in time...",
-    "Each photo tells a story of love and connection...",
-    "Let's explore these moments together...",
+    "Family is a constant — a center of gravity, anchor in the cosmos.",
+    "Every memory, an imprint of love, laughter, and togetherness, etched into the universe.",
+    "Our connection transcends distance, time, and space: stars bound in an unbreakable constellation.",
+    "Love is infinite, happiness innate, take a look ....",
   ];
 
   useEffect(() => {
@@ -23,12 +23,12 @@ const JapaneseIntro: React.FC<JapaneseIntroProps> = ({ onComplete }) => {
       setCurrentTextIndex((prev) => {
         if (prev >= introTexts.length - 1) {
           clearInterval(interval);
-          setTimeout(onComplete, 2000);
+          setTimeout(onComplete, 6000);
           return prev;
         }
         return prev + 1;
       });
-    }, 3000);
+    }, 6000);
 
     return () => clearInterval(interval);
   }, [introTexts.length, onComplete]);

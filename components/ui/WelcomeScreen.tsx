@@ -35,7 +35,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             FamilyWrapped
           </h1>
           <p className="text-lg text-gray-600 mb-12 max-w-lg mx-auto font-['Outfit']">
-            A heartfelt journey through your year's precious moments
+            Another year in the books <br /> Relive precious moments
           </p>
 
           <div className="flex flex-col md:flex-row gap-6 justify-center mb-12">
@@ -72,13 +72,13 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
           <div className="max-w-sm mx-auto bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg mb-8">
             <h2 className="text-2xl font-['Big_Shoulders_Display'] text-gray-800 mb-4">
-              Have a Gift?
+              Been Gifted?
             </h2>
             <input
               type="text"
               value={groupId}
               onChange={(e) => setGroupId(e.target.value)}
-              placeholder="Group ID"
+              placeholder="ID"
               className="w-full px-4 py-2 mb-3 bg-white/80 border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400"
             />
             <input
@@ -106,7 +106,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             className="text-gray-600 hover:text-gray-800 transition-colors duration-300"
             onClick={onCreateGift}
           >
-            Create a gift for someone special →
+            Curate your own gift special people →
           </motion.button>
         </div>
       </motion.div>
