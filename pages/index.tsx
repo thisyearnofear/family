@@ -1,22 +1,42 @@
 import { useState } from "react";
 import { useTheme } from "../contexts/ThemeContext";
-import WelcomeScreen from "../components/WelcomeScreen";
-import SpaceTimeline from "../components/SpaceTimeline";
-import JapaneseTimeline from "../components/JapaneseTimeline";
-import type { ImageProps } from "../utils/types";
-import { getImages } from "../utils/pinata";
+import WelcomeScreen from "../components/ui/WelcomeScreen";
+import SpaceTimeline from "../components/timeline/SpaceTimeline";
+import JapaneseTimeline from "../components/timeline/JapaneseTimeline";
+import { useTimeline } from "../contexts/TimelineContext";
+import type { ImageProps } from "../utils/types/types";
+import { getImages } from "../utils/pinata/pinata";
 import type { GetServerSideProps } from "next";
 
 interface HomeProps {
   images: ImageProps[];
 }
 
-export const getServerSideProps: GetServerSideProps = async () => {
+export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const images = await getImages(process.env.PINATA_GROUP_ID);
+    const groupId =
+      (context.query.groupId as string) || process.env.PINATA_GROUP_ID;
+    if (!groupId) {
+      return {
+        props: {
+          images: [],
+        },
+      };
+    }
+
+    const images = await getImages(groupId);
+
+    // Sort images by dateModified
+    const sortedImages = [...images].sort((a, b) => {
+      if (!a.dateModified || !b.dateModified) return 0;
+      return (
+        new Date(a.dateModified).getTime() - new Date(b.dateModified).getTime()
+      );
+    });
+
     return {
       props: {
-        images,
+        images: sortedImages,
       },
     };
   } catch (error) {

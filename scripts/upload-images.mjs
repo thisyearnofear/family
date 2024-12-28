@@ -1,68 +1,59 @@
-import * as dotenv from "dotenv";
-import axios from "axios";
-import { uploadImagesFromDirectory } from "../utils/uploadImages.ts";
+import { uploadPhotos, validatePhotos } from "../utils/pinata/uploadPhotos.js";
+import { v4 as uuidv4 } from "uuid";
+import fs from "fs";
+import path from "path";
 
-// Load environment variables from .env.local
-dotenv.config({ path: ".env.local" });
+async function main() {
+  const directoryPath = process.argv[2];
+  if (!directoryPath) {
+    console.error("Please provide a directory path");
+    process.exit(1);
+  }
 
-const directoryPath = process.argv[2];
-
-if (!directoryPath) {
-  console.error("Please provide the directory path as an argument");
-  process.exit(1);
-}
-
-async function uploadToGroup() {
   try {
-    const groupId = process.env.PINATA_GROUP_ID;
-    if (!groupId) {
-      throw new Error("PINATA_GROUP_ID not found in environment variables");
+    // Create a unique gift ID
+    const giftId = uuidv4();
+
+    // Convert directory files to File objects
+    const files = fs
+      .readdirSync(directoryPath)
+      .filter((file) => /\.(jpg|jpeg|png|gif)$/i.test(file))
+      .map((file) => {
+        const filePath = path.join(directoryPath, file);
+        const buffer = fs.readFileSync(filePath);
+        return new File([buffer], file, {
+          type: `image/${path.extname(file).slice(1)}`,
+          lastModified: fs.statSync(filePath).mtimeMs,
+        });
+      });
+
+    console.log(`Found ${files.length} image files`);
+
+    // Validate files
+    const { valid, invalid } = validatePhotos(files);
+
+    if (invalid.length > 0) {
+      console.log("\nSkipping invalid files:");
+      invalid.forEach(({ file, reason }) => {
+        console.log(`- ${file.name}: ${reason}`);
+      });
     }
 
-    // First, upload the images and get their CIDs
-    console.log("Uploading images...");
-    const uploadedImages = await uploadImagesFromDirectory(directoryPath);
-    console.log(`Uploaded ${uploadedImages.length} images`);
+    if (valid.length === 0) {
+      console.error("No valid images found");
+      process.exit(1);
+    }
 
-    // Sort images by date taken
-    uploadedImages.sort((a, b) => {
-      if (!a.dateTaken) return 1;
-      if (!b.dateTaken) return -1;
-      return new Date(a.dateTaken).getTime() - new Date(b.dateTaken).getTime();
-    });
+    console.log(`\nUploading ${valid.length} valid images...`);
+    const results = await uploadPhotos(valid, giftId);
 
-    // Then update the group JSON with the new images
-    console.log("Updating group collection...");
-    const response = await axios.post(
-      "https://api.pinata.cloud/pinning/pinJSONToIPFS",
-      {
-        pinataContent: {
-          name: "Family Gallery",
-          description: "A collection of family photos",
-          images: uploadedImages,
-        },
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.PINATA_JWT}`,
-        },
-      }
-    );
-
-    console.log(
-      "Updated collection with new IPFS hash:",
-      response.data.IpfsHash
-    );
-    console.log("Update your PINATA_GROUP_ID in .env.local with this new hash");
+    console.log("\nUpload complete!");
+    console.log("Gift ID:", giftId);
+    console.log("Uploaded images:", results.length);
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error("Error details:", error.response?.data);
-      console.error("Status code:", error.response?.status);
-    } else {
-      console.error("Error:", error);
-    }
+    console.error("Error:", error);
+    process.exit(1);
   }
 }
 
-uploadToGroup();
+main();

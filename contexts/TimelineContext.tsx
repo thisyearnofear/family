@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, ReactNode } from "react";
-import type { ImageProps } from "../utils/types";
+import type { ImageProps } from "../utils/types/types";
 
 interface TimelineState {
   currentIndex: number;
@@ -33,8 +33,10 @@ const groupImagesByMonth = (images: ImageProps[]): MonthGroup[] => {
 
   // Sort images by date
   const sortedImages = [...images].sort((a, b) => {
-    if (!a.dateTaken || !b.dateTaken) return 0;
-    return new Date(a.dateTaken).getTime() - new Date(b.dateTaken).getTime();
+    if (!a.dateModified || !b.dateModified) return 0;
+    return (
+      new Date(a.dateModified).getTime() - new Date(b.dateModified).getTime()
+    );
   });
 
   // Create a map to store images by month
@@ -42,8 +44,8 @@ const groupImagesByMonth = (images: ImageProps[]): MonthGroup[] => {
 
   // Group images by month
   sortedImages.forEach((image) => {
-    if (!image.dateTaken) return;
-    const date = new Date(image.dateTaken);
+    if (!image.dateModified) return;
+    const date = new Date(image.dateModified);
     const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
     const monthName = date.toLocaleString("default", { month: "long" });
 
@@ -56,14 +58,14 @@ const groupImagesByMonth = (images: ImageProps[]): MonthGroup[] => {
   // Convert map to array and sort by date
   const groups = Array.from(monthMap.entries())
     .map(([key, images]) => ({
-      month: new Date(images[0].dateTaken!).toLocaleString("default", {
+      month: new Date(images[0].dateModified!).toLocaleString("default", {
         month: "long",
       }),
       images: images.slice(0, 10), // Limit to 10 images per month
     }))
     .sort((a, b) => {
-      const dateA = new Date(a.images[0].dateTaken!);
-      const dateB = new Date(b.images[0].dateTaken!);
+      const dateA = new Date(a.images[0].dateModified!);
+      const dateB = new Date(b.images[0].dateModified!);
       return dateA.getTime() - dateB.getTime();
     });
 

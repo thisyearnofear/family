@@ -1,14 +1,33 @@
-import { testImageDates } from "../utils/uploadImages";
+import { extractDateFromFileName } from "../utils/pinata/uploadPhotos";
+import fs from "fs";
 
-const directoryPath = process.argv[2] || "./images";
+async function main() {
+  const directoryPath = process.argv[2];
+  if (!directoryPath) {
+    console.error("Please provide a directory path");
+    process.exit(1);
+  }
 
-console.log(`Testing images in directory: ${directoryPath}`);
-testImageDates(directoryPath)
-  .then(() => console.log("\nDate testing complete!"))
-  .catch((error: unknown) => {
-    if (error instanceof Error) {
-      console.error("Error:", error.message);
-    } else {
-      console.error("An unknown error occurred");
+  try {
+    const files = fs
+      .readdirSync(directoryPath)
+      .filter((file) => /\.(jpg|jpeg|png|gif)$/i.test(file));
+
+    console.log(`Found ${files.length} image files`);
+
+    for (const file of files) {
+      console.log(`\nTesting ${file}...`);
+      const dateFromName = extractDateFromFileName(file);
+      if (dateFromName) {
+        console.log(`Date from filename: ${dateFromName}`);
+      } else {
+        console.log("No date found in filename");
+      }
     }
-  });
+  } catch (error) {
+    console.error("Error:", error);
+    process.exit(1);
+  }
+}
+
+main();

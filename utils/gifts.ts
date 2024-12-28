@@ -1,6 +1,6 @@
 import { customAlphabet } from "nanoid";
-import type { ImageProps } from "./types";
-import { deleteGiftGroup } from "./pinata";
+import type { ImageProps } from "./types/types";
+import { deleteGiftGroup } from "./pinata/pinata";
 
 // Create a URL-friendly ID generator (no special chars)
 const generateId = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 10);
