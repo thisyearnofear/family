@@ -379,6 +379,8 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({
               theme="space"
               loadingStates={loadingStates}
               setLoadingStates={setLoadingStates}
+              isAutoHighlighting={isAutoHighlighting}
+              setIsAutoHighlighting={setIsAutoHighlighting}
             />
 
             {/* Controls layer - only shown after intro */}

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useTimeline } from "../../contexts/TimelineContext";
 import { AnimatedContainer } from "../layout/AnimatedContainer";
@@ -14,6 +14,7 @@ interface TimelineViewProps {
 const TimelineView: React.FC<TimelineViewProps> = ({ onComplete }) => {
   const { state, dispatch } = useTimeline();
   const { currentIndex, isPlaying, volume, groupedImages, theme } = state;
+  const [isAutoHighlighting, setIsAutoHighlighting] = useState(true);
 
   // Sound setup
   const [play, { pause, sound }] = useSound("/sounds/background-music.mp3", {
@@ -152,8 +153,8 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onComplete }) => {
         }}
         showNextMonth={currentMonthIndex < groupedImages.length - 1}
         showPreviousMonth={currentMonthIndex > 0}
-        isAutoHighlighting={false}
-        setIsAutoHighlighting={() => {}}
+        isAutoHighlighting={isAutoHighlighting}
+        setIsAutoHighlighting={setIsAutoHighlighting}
       />
     </div>
   );

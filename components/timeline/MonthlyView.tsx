@@ -14,6 +14,8 @@ interface MonthlyViewProps {
   theme?: "space" | "japanese";
   loadingStates?: LoadingState;
   setLoadingStates?: React.Dispatch<React.SetStateAction<LoadingState>>;
+  isAutoHighlighting: boolean;
+  setIsAutoHighlighting: (value: boolean) => void;
 }
 
 interface MonthData {
@@ -50,6 +52,8 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
   theme = "japanese",
   loadingStates = {},
   setLoadingStates = () => {},
+  isAutoHighlighting,
+  setIsAutoHighlighting,
 }) => {
   console.log("MonthlyView Component Mounted");
   console.log("Initial Props:", {
@@ -70,7 +74,6 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
   const [autoHighlightIndex, setAutoHighlightIndex] = useState<number | null>(
     null
   );
-  const [isAutoHighlighting, setIsAutoHighlighting] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);

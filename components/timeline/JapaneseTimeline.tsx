@@ -243,6 +243,8 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({
           theme="japanese"
           loadingStates={loadingStates}
           setLoadingStates={setLoadingStates}
+          isAutoHighlighting={isAutoHighlighting}
+          setIsAutoHighlighting={setIsAutoHighlighting}
         />
       </div>
 
