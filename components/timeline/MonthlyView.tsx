@@ -562,7 +562,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
                 }`}
               >
                 {isSpace ? (
-                  "Your Year in Photos"
+                  "Family Wrapped 2024"
                 ) : (
                   <>
                     思い出の一年
