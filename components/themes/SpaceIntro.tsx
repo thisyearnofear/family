@@ -133,6 +133,20 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
     };
   }, [onComplete, introTexts.length]);
 
+  useEffect(() => {
+    if (!showText) return;
+
+    const timer = setTimeout(() => {
+      if (currentTextIndex >= introTexts.length - 1) {
+        onComplete();
+      } else {
+        setCurrentTextIndex((prev) => prev + 1);
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [showText, currentTextIndex, introTexts.length, onComplete]);
+
   return (
     <div className="fixed inset-0 bg-black">
       <div ref={containerRef} className="absolute inset-0" />

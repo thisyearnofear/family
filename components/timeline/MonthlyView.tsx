@@ -329,33 +329,6 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     setLoadingStates,
   ]);
 
-  // Loading carousel effect
-  const loadingStateKey = currentMonth?.key ?? "";
-  const currentMonthImages = currentMonth?.images ?? [];
-  const currentMonthImagesLength = currentMonthImages.length;
-  const isMonthLoading = loadingStates[loadingStateKey]?.isLoading;
-
-  useEffect(() => {
-    if (!currentMonth || currentMonthImagesLength <= 1 || !isMonthLoading)
-      return;
-
-    const interval = setInterval(() => {
-      setCarouselIndex((prev) => (prev + 1) % currentMonthImagesLength);
-    }, 800);
-
-    return () => clearInterval(interval);
-  }, [currentMonthImagesLength, isMonthLoading]);
-
-  // Reset carousel index when month changes
-  useEffect(() => {
-    if (currentMonth) {
-      setCarouselIndex(0);
-    }
-  }, [currentMonth]);
-
-  // Check if we're at the end
-  const isLastImage = currentIndex === images.length - 1;
-
   // Auto-focus effect for gallery view
   useEffect(() => {
     if (
@@ -415,7 +388,34 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
       setFocusedIndex(null);
       setHighlightedImage(null);
     };
-  }, [currentMonth?.key, loadingStates[currentMonth?.key ?? ""]?.isLoading]);
+  }, [currentMonth, loadingStates]);
+
+  // Reset carousel index when month changes
+  useEffect(() => {
+    if (currentMonth) {
+      setCarouselIndex(0);
+    }
+  }, [currentMonth?.key]);
+
+  // Loading carousel effect
+  useEffect(() => {
+    const isMonthLoading =
+      currentMonth && loadingStates[currentMonth.key]?.isLoading;
+    const hasMultipleImages = currentMonth?.images.length > 1;
+
+    if (!isMonthLoading || !hasMultipleImages) return;
+
+    const interval = setInterval(() => {
+      setCarouselIndex(
+        (prev) => (prev + 1) % (currentMonth?.images.length || 1)
+      );
+    }, 800);
+
+    return () => clearInterval(interval);
+  }, [currentMonth, loadingStates, currentMonth?.images.length]);
+
+  // Check if we're at the end
+  const isLastImage = currentIndex === images.length - 1;
 
   // Render highlighted image overlay
   const renderHighlightedImage = () => {
