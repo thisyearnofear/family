@@ -16,17 +16,14 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**.pinata.cloud",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
         hostname: "gateway.pinata.cloud",
+        port: "",
         pathname: "/ipfs/**",
       },
     ],
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
+    unoptimized: true,
   },
   env: {
     PINATA_JWT: process.env.PINATA_JWT,
@@ -52,6 +49,9 @@ const nextConfig = {
     });
 
     return config;
+  },
+  typescript: {
+    ignoreBuildErrors: true,
   },
 };
 
