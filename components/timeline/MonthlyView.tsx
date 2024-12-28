@@ -235,7 +235,12 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
 
   // Auto highlight timer
   useEffect(() => {
-    if (!currentMonth || !isAutoHighlighting) return;
+    if (!currentMonth || !isAutoHighlighting) {
+      // Clear highlighted image when auto-highlighting is paused
+      setHighlightedImage(null);
+      setAutoHighlightIndex(null);
+      return;
+    }
 
     const timer = setInterval(() => {
       setAutoHighlightIndex((prev) => {
@@ -251,10 +256,15 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
 
   // Update highlighted image when auto highlight index changes
   useEffect(() => {
+    if (!isAutoHighlighting) {
+      setHighlightedImage(null);
+      return;
+    }
+
     if (autoHighlightIndex !== null && currentMonth) {
       setHighlightedImage(currentMonth.images[autoHighlightIndex]);
     }
-  }, [autoHighlightIndex, currentMonth]);
+  }, [autoHighlightIndex, currentMonth, isAutoHighlighting]);
 
   // Reset auto highlight when month changes
   useEffect(() => {
@@ -273,11 +283,11 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     const lastMonth = monthlyData[monthlyData.length - 2]; // -2 because -1 is the gallery
     if (!lastMonth) return false;
 
-    // Ensure the currentIndex is beyond the last month's images
-    return (
-      currentIndex >= lastMonth.startIndex + lastMonth.images.length ||
-      currentMonth?.key === "gallery"
-    );
+    // Check if we're at the end of the last month's images
+    const isAtEndOfLastMonth =
+      currentIndex >= lastMonth.startIndex + lastMonth.images.length - 1;
+
+    return isAtEndOfLastMonth || currentMonth?.key === "gallery";
   }, [monthlyData, currentIndex, currentMonth]);
 
   // Adjust navigation logic to allow transition to gallery
@@ -285,9 +295,10 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     const nextMonthIndex = currentMonthIndex + 1;
     if (nextMonthIndex < monthlyData.length) {
       onImageClick?.(monthlyData[nextMonthIndex].startIndex);
-    } else if (nextMonthIndex === monthlyData.length) {
-      // Transition to gallery
-      onImageClick?.(monthlyData[nextMonthIndex - 1].startIndex);
+    } else if (currentMonthIndex === monthlyData.length - 2) {
+      // If we're at the last regular month, transition to gallery
+      const lastMonth = monthlyData[monthlyData.length - 2];
+      onImageClick?.(lastMonth.startIndex + lastMonth.images.length);
     }
   }, [currentMonthIndex, monthlyData, onImageClick]);
 

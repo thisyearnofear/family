@@ -159,15 +159,16 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
 
       {/* Skip button */}
       <motion.button
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="fixed bottom-8 right-8 px-6 py-3 bg-blue-600/70 hover:bg-blue-700/70 text-white rounded-lg shadow-lg backdrop-blur-sm border border-blue-500/30 transition-all hover:scale-105"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        className="fixed bottom-8 right-8 px-6 py-3 rounded-full bg-blue-600/70 hover:bg-blue-700/70 backdrop-blur-sm text-white font-medium transition-colors"
         onClick={() => {
           setShowText(false);
           onComplete();
         }}
       >
-        Skip Intro
+        Skip Intro →
       </motion.button>
     </div>
   );

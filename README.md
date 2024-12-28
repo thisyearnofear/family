@@ -31,55 +31,38 @@ Memory Flow is an interactive gift experience that lets you share your year's mo
 - `utils/`: Utility functions and helpers
 - `styles/`: Global styles and Tailwind configuration
 
-## Configuration
+## Development Roadmap
 
-### Development Environment
+### Phase 1 - Core Experience (Current)
 
-```javascript
-// next.config.cjs
-const nextConfig = {
-  // ... other config options
-  images: {
-    domains: ["gateway.pinata.cloud"],
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "gateway.pinata.cloud",
-        port: "",
-        pathname: "/ipfs/**",
-      },
-    ],
-    minimumCacheTTL: 60,
-    dangerouslyAllowSVG: true,
-    unoptimized: process.env.NODE_ENV === "development",
-  },
-};
-```
+- [x] Basic timeline implementation
+- [x] Theme switching (Space/Zen)
+- [x] Photo navigation and viewing
+- [x] Monthly collages
+- [x] Animation and transitions
 
-### Production Environment
+### Phase 2 - Gift Creation (In Progress)
 
-```javascript
-// next.config.cjs
-const nextConfig = {
-  // ... other config options
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**.pinata.cloud",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "gateway.pinata.cloud",
-        pathname: "/ipfs/**",
-      },
-    ],
-    minimumCacheTTL: 60,
-    dangerouslyAllowSVG: true,
-  },
-};
-```
+- [ ] Password protection system
+- [ ] Photo upload and IPFS integration
+- [ ] Creation wizard interface
+- [ ] Theme customization
+- [ ] Message personalization
+
+### Phase 3 - Enhancement
+
+- [ ] Advanced collage layouts
+- [ ] Additional themes
+- [ ] Sharing mechanisms
+- [ ] Mobile optimization
+- [ ] Analytics integration
+
+### Phase 4 - Monetization
+
+- [ ] Payment integration
+- [ ] Subscription/pricing models
+- [ ] Premium features
+- [ ] Gift vouchers
 
 ## Getting Started
 
@@ -91,9 +74,6 @@ const nextConfig = {
 3. Set up environment variables:
    ```env
    NEXT_PUBLIC_PINATA_GATEWAY=your_gateway_url
-   NEXT_PUBLIC_PINATA_GROUP_ID=your_group_id
-   PINATA_JWT=your_jwt_token
-   PINATA_GROUP_ID=your_group_id
    ```
 4. Run the development server:
    ```bash
@@ -113,3 +93,262 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ### Media Content
 
 All images and videos are licensed under [Creative Commons Attribution-NonCommercial-NoDerivs 4.0](http://creativecommons.org/licenses/by-nc-nd/4.0/).
+
+---
+
+Local settings
+
+import Image from "next/image";
+import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
+
+const DevImage = dynamic(
+() => import("./DevImage").then((mod) => mod.default),
+{ ssr: false }
+);
+
+interface LazyImageProps {
+src: string;
+alt: string;
+className?: string;
+priority?: boolean;
+fill?: boolean;
+width?: number;
+height?: number;
+sizes?: string;
+quality?: number;
+onLoad?: () => void;
+}
+
+const LazyImage: React.FC<LazyImageProps> = ({
+src,
+alt,
+className = "",
+priority = false,
+fill = false,
+width,
+height,
+sizes = "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw",
+quality = 75,
+onLoad,
+}) => {
+return <Image src={src} alt={alt} className={className} fill={fill} width={width} height={height} sizes={sizes} priority={priority} quality={quality} onLoad={onLoad} />;
+};
+
+export default LazyImage;
+
+import Image from "next/image";
+import { motion } from "framer-motion";
+import type { ImageProps } from "../../utils/types/types";
+import dynamic from "next/dynamic";
+
+// Dynamically import DevImage only in development
+const DevImage = dynamic(
+() => import("./DevImage").then((mod) => mod.default),
+{ ssr: false }
+);
+
+interface MemoryImageProps {
+image: ImageProps;
+priority?: boolean;
+onLoad?: () => void;
+className?: string;
+isInteractive?: boolean;
+}
+
+const MemoryImage: React.FC<MemoryImageProps> = ({
+image,
+priority = false,
+onLoad,
+className = "",
+isInteractive = false,
+}) => {
+const gateway =
+process.env.NEXT_PUBLIC_PINATA_GATEWAY?.replace(/\/$/, "") ||
+    "https://gateway.pinata.cloud/ipfs";
+  const imageUrl = image.ipfsHash.startsWith("http")
+    ? image.ipfsHash
+    : `${gateway}/${image.ipfsHash}`;
+
+if (process.env.NODE_ENV === "development") {
+return (
+<motion.div
+className={`relative w-full h-full overflow-hidden ${
+          isInteractive ? "cursor-pointer" : ""
+        }`}
+whileHover={
+isInteractive
+? {
+scale: 1.05,
+transition: { duration: 0.2 },
+}
+: undefined
+} >
+<DevImage
+src={imageUrl}
+alt={image.description || "Memory"}
+className={`object-cover ${className}`}
+fill
+sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+priority={priority}
+quality={75}
+onLoad={onLoad}
+/>
+</motion.div>
+);
+}
+
+return (
+<motion.div
+className={`relative w-full h-full overflow-hidden ${
+        isInteractive ? "cursor-pointer" : ""
+      }`}
+whileHover={
+isInteractive
+? {
+scale: 1.05,
+transition: { duration: 0.2 },
+}
+: undefined
+} >
+<Image
+src={imageUrl}
+alt={image.description || "Memory"}
+className={`object-cover ${className}`}
+fill
+sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+priority={priority}
+quality={75}
+onLoad={onLoad}
+/>
+</motion.div>
+);
+};
+
+export default MemoryImage;
+
+/** @type {import('next').NextConfig} \*/
+const nextConfig = {
+reactStrictMode: true,
+swcMinify: true,
+experimental: {
+optimizeCss: true,
+},
+transpilePackages: [
+"three",
+"p5",
+"pinata-web3",
+"@pinata/sdk",
+"react-use-keypress",
+],
+images: {
+domains: ["gateway.pinata.cloud"],
+remotePatterns: [
+{
+protocol: "https",
+hostname: "gateway.pinata.cloud",
+port: "",
+pathname: "/ipfs/**",
+},
+],
+minimumCacheTTL: 60,
+dangerouslyAllowSVG: true,
+unoptimized: process.env.NODE_ENV === "development",
+},
+env: {
+PINATA_JWT: process.env.PINATA_JWT,
+PINATA_GROUP_ID: process.env.PINATA_GROUP_ID,
+},
+compiler: {
+removeConsole: process.env.NODE_ENV === "production",
+},
+webpack: (config, { isServer }) => {
+if (!isServer) {
+config.resolve.fallback = {
+...config.resolve.fallback,
+fs: false,
+net: false,
+tls: false,
+};
+}
+
+    config.module.rules.push({
+      test: /\.(glsl|vs|fs|vert|frag)$/,
+      exclude: /node_modules/,
+      use: ["raw-loader", "glslify-loader"],
+    });
+
+    return config;
+
+},
+typescript: {
+ignoreBuildErrors: true,
+},
+};
+
+module.exports = nextConfig;
+
+PROD
+
+/** @type {import('next').NextConfig} \*/
+const nextConfig = {
+reactStrictMode: true,
+swcMinify: true,
+experimental: {
+optimizeCss: true,
+},
+transpilePackages: [
+"three",
+"p5",
+"pinata-web3",
+"@pinata/sdk",
+"react-use-keypress",
+],
+images: {
+remotePatterns: [
+{
+protocol: "https",
+hostname: "**.pinata.cloud",
+pathname: "/**",
+},
+{
+protocol: "https",
+hostname: "gateway.pinata.cloud",
+pathname: "/ipfs/**",
+},
+],
+minimumCacheTTL: 60,
+dangerouslyAllowSVG: true,
+},
+env: {
+PINATA_JWT: process.env.PINATA_JWT,
+PINATA_GROUP_ID: process.env.PINATA_GROUP_ID,
+},
+compiler: {
+removeConsole: process.env.NODE_ENV === "production",
+},
+webpack: (config, { isServer }) => {
+if (!isServer) {
+config.resolve.fallback = {
+...config.resolve.fallback,
+fs: false,
+net: false,
+tls: false,
+};
+}
+
+    config.module.rules.push({
+      test: /\.(glsl|vs|fs|vert|frag)$/,
+      exclude: /node_modules/,
+      use: ["raw-loader", "glslify-loader"],
+    });
+
+    return config;
+
+},
+typescript: {
+ignoreBuildErrors: true,
+},
+};
+
+module.exports = nextConfig;
