@@ -152,6 +152,8 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onComplete }) => {
         }}
         showNextMonth={currentMonthIndex < groupedImages.length - 1}
         showPreviousMonth={currentMonthIndex > 0}
+        isAutoHighlighting={false}
+        setIsAutoHighlighting={() => {}}
       />
     </div>
   );
