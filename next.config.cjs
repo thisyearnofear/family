@@ -14,6 +14,12 @@ const nextConfig = {
   ],
   images: {
     domains: ["gateway.pinata.cloud"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "gateway.pinata.cloud",
+      },
+    ],
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
   },

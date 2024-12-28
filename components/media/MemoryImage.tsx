@@ -17,10 +17,12 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
   priority = false,
   onLoad,
 }) => {
-  const gateway = "https://gateway.pinata.cloud/ipfs";
+  const gateway =
+    process.env.NEXT_PUBLIC_PINATA_GATEWAY ||
+    "https://gateway.pinata.cloud/ipfs";
   const imageUrl = image.ipfsHash.startsWith("http")
     ? image.ipfsHash
-    : `${gateway}/${image.ipfsHash}`;
+    : `${gateway}/${encodeURIComponent(image.ipfsHash)}`;
 
   return (
     <div className={`relative w-full h-full ${className}`}>
@@ -35,6 +37,7 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
         quality={75}
         priority={priority}
         onLoad={onLoad}
+        unoptimized={process.env.NODE_ENV === "development"}
       />
     </div>
   );
