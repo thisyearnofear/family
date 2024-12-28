@@ -14,9 +14,14 @@ interface HomeProps {
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
+    console.log("Starting getServerSideProps");
+
     const groupId =
       (context.query.groupId as string) || process.env.PINATA_GROUP_ID;
+    console.log("Using groupId:", groupId);
+
     if (!groupId) {
+      console.log("No groupId found, returning empty images array");
       return {
         props: {
           images: [],
@@ -24,7 +29,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       };
     }
 
+    console.log("Fetching images with groupId:", groupId);
     const images = await getImages(groupId);
+    console.log("Fetched images count:", images.length);
 
     // Sort images by dateModified
     const sortedImages = [...images].sort((a, b) => {
@@ -33,6 +40,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         new Date(a.dateModified).getTime() - new Date(b.dateModified).getTime()
       );
     });
+    console.log("Sorted images count:", sortedImages.length);
 
     return {
       props: {
@@ -40,7 +48,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       },
     };
   } catch (error) {
-    console.error("Error fetching images:", error);
+    console.error("Error in getServerSideProps:", error);
+    if (error instanceof Error) {
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+      });
+    }
     return {
       props: {
         images: [],
