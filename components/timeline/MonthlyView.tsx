@@ -180,6 +180,14 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
       currentStartIndex++;
     });
 
+    // Add a final "Review" stage
+    months.push({
+      key: "year-review",
+      month: "Year in Review",
+      images: sortedImages,
+      startIndex: currentStartIndex,
+    });
+
     return months;
   }, [images]);
 
@@ -188,7 +196,8 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     const monthIndex = monthlyData.findIndex(
       (month) =>
         currentIndex >= month.startIndex &&
-        currentIndex < month.startIndex + month.images.length
+        (month.key === "year-review" ||
+          currentIndex < month.startIndex + month.images.length)
     );
     return {
       currentMonth: monthIndex >= 0 ? monthlyData[monthIndex] : null,
@@ -275,8 +284,8 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     );
   };
 
-  // Check if we're at the end
-  const isLastImage = currentIndex === images.length - 1;
+  // Check if we're in the review stage
+  const isReviewStage = currentMonth?.key === "year-review";
 
   // Add loading indicator for final collage
   const renderLoadingIndicator = () => {
@@ -294,7 +303,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
   };
 
   // Render final collage
-  if (isLastImage) {
+  if (isReviewStage) {
     const isSpace = theme === "space";
     const bgClass = isSpace
       ? "bg-black/50 border-blue-500/30"
@@ -311,6 +320,32 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     const isLoading = Object.values(loadingStates).some(
       (state) => state.isLoading || state.loadedCount < state.totalCount
     );
+
+    // Initialize loading state for final collage if not exists
+    useEffect(() => {
+      if (!loadingStates["final-collage"]) {
+        setLoadingStates((prev) => ({
+          ...prev,
+          "final-collage": {
+            isLoading: true,
+            loadedCount: 0,
+            totalCount: images.length,
+          },
+        }));
+      }
+    }, [loadingStates, images.length]);
+
+    // Handle image load for final collage
+    const handleImageLoad = (index: number) => {
+      setLoadingStates((prev) => ({
+        ...prev,
+        "final-collage": {
+          isLoading: false,
+          loadedCount: (prev["final-collage"]?.loadedCount || 0) + 1,
+          totalCount: images.length,
+        },
+      }));
+    };
 
     return (
       <>
@@ -377,9 +412,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
                       image={image}
                       isInteractive
                       className="rounded-lg shadow-md transition-transform group-hover:scale-105"
-                      onLoad={() =>
-                        handleImageLoad("final-collage", idx, images.length)
-                      }
+                      onLoad={() => handleImageLoad(idx)}
                     />
                   </motion.div>
                 ))}
@@ -416,7 +449,6 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
               className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
               onClick={() => {
                 setHighlightedImage(null);
-                setIsAutoHighlighting(true);
               }}
             >
               <motion.div
