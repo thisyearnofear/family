@@ -23,6 +23,7 @@
     "exif-reader": "^2.0.1",
     "formdata-node": "^5.0.1",
     "framer-motion": "^11.15.0",
+    "nanoid": "^5.0.9",
     "next": "14.1.0",
     "p5": "^1.11.2",
     "pinata-web3": "^0.5.3",

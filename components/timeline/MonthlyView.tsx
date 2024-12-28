@@ -256,25 +256,27 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
 
   // Loading carousel effect
   const loadingStateKey = currentMonth?.key ?? "";
+  const currentMonthImages = currentMonth?.images ?? [];
+  const currentMonthImagesLength = currentMonthImages.length;
+  const isMonthLoading = loadingStates[loadingStateKey]?.isLoading;
+
   useEffect(() => {
-    if (
-      !currentMonth ||
-      currentMonth.images.length <= 1 ||
-      !loadingStates[loadingStateKey]?.isLoading
-    )
+    if (!currentMonth || currentMonthImagesLength <= 1 || !isMonthLoading)
       return;
 
     const interval = setInterval(() => {
-      setCarouselIndex((prev) => (prev + 1) % currentMonth.images.length);
+      setCarouselIndex((prev) => (prev + 1) % currentMonthImagesLength);
     }, 800);
 
     return () => clearInterval(interval);
-  }, [currentMonth, loadingStates, loadingStateKey]);
+  }, [currentMonthImagesLength, isMonthLoading]);
 
   // Reset carousel index when month changes
   useEffect(() => {
-    setCarouselIndex(0);
-  }, [currentMonth?.key]);
+    if (currentMonth) {
+      setCarouselIndex(0);
+    }
+  }, [currentMonth]);
 
   // Check if we're at the end
   const isLastImage = currentIndex === images.length - 1;
