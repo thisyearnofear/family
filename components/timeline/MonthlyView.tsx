@@ -283,24 +283,30 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     const lastMonth = monthlyData[monthlyData.length - 2]; // -2 because -1 is the gallery
     if (!lastMonth) return false;
 
-    // Check if we're at the end of the last month's images
-    const isAtEndOfLastMonth =
-      currentIndex >= lastMonth.startIndex + lastMonth.images.length - 1;
-
-    return isAtEndOfLastMonth || currentMonth?.key === "gallery";
+    // Show gallery if we're at the gallery month or transitioning from December
+    return (
+      currentMonth?.key === "gallery" ||
+      (currentMonth?.month.includes("December") &&
+        currentIndex >= lastMonth.startIndex + lastMonth.images.length - 1)
+    );
   }, [monthlyData, currentIndex, currentMonth]);
 
   // Adjust navigation logic to allow transition to gallery
   const handleNextMonth = useCallback(() => {
     const nextMonthIndex = currentMonthIndex + 1;
+
+    // If we're at the last regular month (December), transition to gallery
+    if (currentMonth?.month.includes("December")) {
+      const galleryMonth = monthlyData[monthlyData.length - 1]; // Get the gallery month
+      onImageClick?.(galleryMonth.startIndex);
+      return;
+    }
+
+    // Normal month navigation
     if (nextMonthIndex < monthlyData.length) {
       onImageClick?.(monthlyData[nextMonthIndex].startIndex);
-    } else if (currentMonthIndex === monthlyData.length - 2) {
-      // If we're at the last regular month, transition to gallery
-      const lastMonth = monthlyData[monthlyData.length - 2];
-      onImageClick?.(lastMonth.startIndex + lastMonth.images.length);
     }
-  }, [currentMonthIndex, monthlyData, onImageClick]);
+  }, [currentMonthIndex, monthlyData, onImageClick, currentMonth]);
 
   // Render timeline controls with highlight toggle
   const renderTimelineControls = () => {

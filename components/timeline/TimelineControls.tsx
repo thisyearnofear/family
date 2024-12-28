@@ -70,7 +70,11 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
         {/* Add toggle button for auto-highlighting */}
         <button
           onClick={() => setIsAutoHighlighting(!isAutoHighlighting)}
-          className={`p-2 rounded-full transition-colors ${hoverClass} text-sm sm:text-base`}
+          className={`p-2 rounded-full transition-colors ${
+            isSpace
+              ? "bg-blue-600/80 hover:bg-blue-700/80 text-white border border-blue-400/50"
+              : "bg-red-600/70 hover:bg-red-700/70 text-white"
+          } text-sm sm:text-base backdrop-blur-sm shadow-lg`}
         >
           {isAutoHighlighting ? "Pause Highlights" : "Resume Highlights"}
         </button>
@@ -94,9 +98,13 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
               <div className="relative">
                 <button
                   onClick={onNextMonth}
-                  disabled={!showNextMonth}
+                  disabled={
+                    !showNextMonth && !currentMonth?.includes("December")
+                  }
                   className={`p-1.5 rounded-full transition-colors ${
-                    showNextMonth ? hoverClass : disabledClass
+                    showNextMonth || currentMonth?.includes("December")
+                      ? hoverClass
+                      : disabledClass
                   }`}
                 >
                   <ChevronRightIcon
@@ -301,9 +309,13 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
               <div className="relative">
                 <button
                   onClick={onNextMonth}
-                  disabled={!showNextMonth}
+                  disabled={
+                    !showNextMonth && !currentMonth?.includes("December")
+                  }
                   className={`p-2 rounded-full transition-all duration-300 ${
-                    showNextMonth ? hoverClass : disabledClass
+                    showNextMonth || currentMonth?.includes("December")
+                      ? hoverClass
+                      : disabledClass
                   } ${showReadyIndicator ? "scale-110" : ""}`}
                 >
                   <ChevronRightIcon

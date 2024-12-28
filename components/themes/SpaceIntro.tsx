@@ -146,7 +146,7 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 1 }}
-            className="text-center px-4 max-w-4xl mx-auto"
+            className="fixed inset-0 flex items-center justify-center px-4 z-10"
           >
             <div className="bg-black/50 backdrop-blur-sm rounded-lg py-8 px-6 border border-blue-500/30">
               <p className="text-3xl md:text-4xl text-white font-bold">
@@ -157,12 +157,12 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
         )}
       </AnimatePresence>
 
-      {/* Skip button */}
+      {/* Skip button - always visible */}
       <motion.button
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
-        className="fixed bottom-8 right-8 px-6 py-3 rounded-full bg-blue-600/70 hover:bg-blue-700/70 backdrop-blur-sm text-white font-medium transition-colors"
+        className="fixed bottom-8 right-8 px-6 py-3 rounded-full bg-blue-600/70 hover:bg-blue-700/70 text-white backdrop-blur-sm border border-blue-500/30 transition-all hover:scale-105 z-20"
         onClick={() => {
           setShowText(false);
           onComplete();
