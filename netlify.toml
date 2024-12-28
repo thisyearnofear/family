@@ -9,15 +9,18 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-  [plugins.inputs]
-    debug = true
 
 [functions]
   included_files = ["utils/**"]
   node_bundler = "esbuild"
+  external_node_modules = ["@pinata/sdk", "axios"]
 
 [[redirects]]
   from = "/*"
   to = "/.netlify/functions/___netlify-server-handler"
   status = 200
-  force = true 
+  force = true
+
+[dev]
+  framework = "next"
+  targetPort = 3000 
