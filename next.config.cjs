@@ -5,6 +5,13 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
   },
+  transpilePackages: [
+    "three",
+    "p5",
+    "pinata-web3",
+    "@pinata/sdk",
+    "react-use-keypress",
+  ],
   images: {
     domains: ["gateway.pinata.cloud"],
     unoptimized: true,
@@ -25,6 +32,13 @@ const nextConfig = {
         tls: false,
       };
     }
+
+    config.module.rules.push({
+      test: /\.(glsl|vs|fs|vert|frag)$/,
+      exclude: /node_modules/,
+      use: ["raw-loader", "glslify-loader"],
+    });
+
     return config;
   },
 };
