@@ -6,6 +6,7 @@ interface MemoryImageProps {
   image: ImageProps;
   className?: string;
   isInteractive?: boolean;
+  priority?: boolean;
   onLoad?: () => void;
 }
 
@@ -13,6 +14,7 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
   image,
   className = "",
   isInteractive = false,
+  priority = false,
   onLoad,
 }) => {
   const gateway =
@@ -33,6 +35,7 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
         fill
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         quality={75}
+        priority={priority}
         onLoad={onLoad}
       />
     </div>
