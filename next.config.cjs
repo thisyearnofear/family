@@ -13,7 +13,8 @@ const nextConfig = {
     "react-use-keypress",
   ],
   images: {
-    domains: ["gateway.pinata.cloud"],
+    loader: "custom",
+    loaderFile: "./utils/image-loader.ts",
     unoptimized: true,
   },
   env: {
