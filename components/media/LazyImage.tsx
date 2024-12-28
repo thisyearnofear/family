@@ -1,43 +1,30 @@
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import type { ImageProps } from "../../utils/types/types";
+import CustomImage from "../ui/CustomImage";
+import { useState } from "react";
 
 interface LazyImageProps {
-  image: ImageProps;
+  src: string;
+  alt: string;
   className?: string;
   onLoad?: () => void;
 }
 
-const LazyImage = ({ image, className = "", onLoad }: LazyImageProps) => {
+const LazyImage: React.FC<LazyImageProps> = ({
+  src,
+  alt,
+  className = "",
+  onLoad,
+}) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [src, setSrc] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadImage = async () => {
-      const url = `${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${image.ipfsHash}`;
-      setSrc(url);
-    };
-    loadImage();
-  }, [image.ipfsHash]);
-
-  if (!src) return null;
 
   return (
-    <div className={`relative w-full h-full ${className}`}>
-      <Image
+    <div className={`relative ${className}`}>
+      <CustomImage
         src={src}
-        alt={
-          image.dateTaken
-            ? new Date(image.dateTaken).toLocaleDateString()
-            : "Memory"
-        }
-        fill
-        className={`object-cover transition-opacity duration-300 ${
+        alt={alt}
+        className={`transition-opacity duration-700 ${
           isLoading ? "opacity-0" : "opacity-100"
         }`}
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        loading="lazy"
-        onLoadingComplete={() => {
+        onLoad={() => {
           setIsLoading(false);
           onLoad?.();
         }}

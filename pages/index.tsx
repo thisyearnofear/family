@@ -3,6 +3,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import WelcomeScreen from "../components/ui/WelcomeScreen";
 import SpaceTimeline from "../components/timeline/SpaceTimeline";
 import JapaneseTimeline from "../components/timeline/JapaneseTimeline";
+import PageTransition from "../components/layout/PageTransition";
 import { useTimeline } from "../contexts/TimelineContext";
 import type { ImageProps } from "../utils/types/types";
 import { getImages } from "../utils/pinata/pinata";
@@ -156,13 +157,27 @@ export default function Home({ images, error, debug }: HomeProps) {
     );
   }
 
-  if (!hasSelectedTheme) {
-    return <WelcomeScreen onThemeSelect={() => setHasSelectedTheme(true)} />;
-  }
+  return (
+    <>
+      <PageTransition isPresent={!hasSelectedTheme}>
+        <WelcomeScreen
+          onThemeSelect={() => {
+            // Delay the state change to allow for exit animation
+            setTimeout(() => setHasSelectedTheme(true), 300);
+          }}
+          onCreateGift={function (): void {
+            throw new Error("Function not implemented.");
+          }}
+        />
+      </PageTransition>
 
-  return theme === "space" ? (
-    <SpaceTimeline images={images} />
-  ) : (
-    <JapaneseTimeline images={images} />
+      <PageTransition isPresent={hasSelectedTheme} theme={theme}>
+        {theme === "space" ? (
+          <SpaceTimeline images={images} />
+        ) : (
+          <JapaneseTimeline images={images} />
+        )}
+      </PageTransition>
+    </>
   );
 }

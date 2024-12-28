@@ -1,98 +1,43 @@
-import Image from "next/image";
-import { useState } from "react";
-import type { ImageProps } from "../../utils/types/types";
+import CustomImage from "../ui/CustomImage";
+import { motion } from "framer-motion";
+import { ImageProps } from "../../utils/types/types";
 
 interface MemoryImageProps {
   image: ImageProps;
-  isInteractive?: boolean;
-  className?: string;
+  priority?: boolean;
   onLoad?: () => void;
+  className?: string;
+  isInteractive?: boolean;
 }
 
 const MemoryImage: React.FC<MemoryImageProps> = ({
   image,
-  isInteractive = false,
-  className = "",
+  priority = false,
   onLoad,
+  className = "",
+  isInteractive = false,
 }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isError, setIsError] = useState(false);
-
-  // Construct the full URL for the image
   const imageUrl = image.ipfsHash.startsWith("http")
     ? image.ipfsHash
-    : `https://gateway.pinata.cloud/ipfs/${image.ipfsHash}`;
+    : `${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${image.ipfsHash}`;
 
-  // In production, use a regular img tag to bypass Next.js image optimization
-  if (process.env.NODE_ENV === "production") {
-    return (
-      <div className={`relative w-full h-full ${className}`}>
-        <img
-          src={imageUrl}
-          alt={`Image taken on ${image.dateTaken || "unknown date"}`}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
-            isLoading || isError ? "opacity-0" : "opacity-100"
-          } ${isInteractive ? "cursor-pointer" : ""}`}
-          onLoad={() => {
-            setIsLoading(false);
-            onLoad?.();
-          }}
-          onError={() => {
-            console.error("Failed to load image:", imageUrl);
-            setIsError(true);
-            setIsLoading(false);
-          }}
-        />
-        {(isLoading || isError) && (
-          <div
-            className={`absolute inset-0 ${
-              isError ? "bg-red-100" : "bg-gray-100"
-            } animate-pulse flex items-center justify-center`}
-          >
-            {isError && (
-              <span className="text-red-500 text-sm">Failed to load image</span>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // In development, use Next.js Image component
   return (
-    <div className={`relative w-full h-full ${className}`}>
-      <Image
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className={`relative w-full h-full ${
+        isInteractive ? "cursor-pointer" : ""
+      }`}
+    >
+      <CustomImage
         src={imageUrl}
-        alt={`Image taken on ${image.dateTaken || "unknown date"}`}
-        className={`object-cover transition-opacity duration-700 ${
-          isLoading || isError ? "opacity-0" : "opacity-100"
-        } ${isInteractive ? "cursor-pointer" : ""}`}
-        fill
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        quality={90}
-        priority={false}
-        onLoadingComplete={() => {
-          setIsLoading(false);
-          onLoad?.();
-        }}
-        onError={() => {
-          console.error("Failed to load image:", imageUrl);
-          setIsError(true);
-          setIsLoading(false);
-        }}
+        alt={image.description || "Memory"}
+        className={`object-cover w-full h-full ${className}`}
+        priority={priority}
+        onLoad={onLoad}
       />
-      {(isLoading || isError) && (
-        <div
-          className={`absolute inset-0 ${
-            isError ? "bg-red-100" : "bg-gray-100"
-          } animate-pulse flex items-center justify-center`}
-        >
-          {isError && (
-            <span className="text-red-500 text-sm">Failed to load image</span>
-          )}
-        </div>
-      )}
-    </div>
+    </motion.div>
   );
 };
 

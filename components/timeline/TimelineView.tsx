@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useTimeline } from "../../contexts/TimelineContext";
 import { AnimatedContainer } from "../layout/AnimatedContainer";
-import LazyImage from "../media/LazyImage";
+import MemoryImage from "../media/MemoryImage";
 import TimelineControls from "./TimelineControls";
 import MonthlyCollage from "../ui/MonthlyCollage";
 import useSound from "use-sound";
@@ -65,15 +65,11 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onComplete }) => {
           </h2>
           <div className="w-full max-w-6xl p-8">
             <MonthlyCollage
-              month=""
               images={allImages}
-              theme={theme}
-              onImageClick={(image) => {
-                const newIndex = allImages.findIndex(
-                  (img) => img.ipfsHash === image.ipfsHash
-                );
-                if (newIndex !== -1)
-                  dispatch({ type: "SET_INDEX", payload: newIndex });
+              onImageClick={(index) => {
+                if (index !== -1) {
+                  dispatch({ type: "SET_INDEX", payload: index });
+                }
               }}
             />
           </div>
@@ -88,15 +84,14 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onComplete }) => {
           className="fixed inset-0 flex items-center justify-center"
         >
           <MonthlyCollage
-            month={currentGroup.month}
             images={currentGroup.images}
-            theme={theme}
-            onImageClick={(image) => {
-              const newIndex = allImages.findIndex(
-                (img) => img.ipfsHash === image.ipfsHash
+            onImageClick={(index) => {
+              const globalIndex = allImages.findIndex(
+                (img) => img === currentGroup.images[index]
               );
-              if (newIndex !== -1)
-                dispatch({ type: "SET_INDEX", payload: newIndex });
+              if (globalIndex !== -1) {
+                dispatch({ type: "SET_INDEX", payload: globalIndex });
+              }
             }}
           />
         </AnimatedContainer>
@@ -109,9 +104,9 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onComplete }) => {
         className="fixed inset-0 flex items-center justify-center"
       >
         <div className="relative w-full max-w-4xl h-full max-h-[80vh] p-4">
-          <LazyImage
+          <MemoryImage
             image={currentImage}
-            className="rounded-lg overflow-hidden"
+            priority={true}
             onLoad={() => {
               /* Handle load complete */
             }}

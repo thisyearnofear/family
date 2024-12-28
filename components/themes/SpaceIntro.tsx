@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface SpaceIntroProps {
   onComplete: () => void;
@@ -137,24 +137,35 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
   return (
     <div className="fixed inset-0 bg-black">
       <div ref={containerRef} className="absolute inset-0" />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: showText ? 1 : 0 }}
-        className="absolute inset-0 flex items-center justify-center pointer-events-none"
-      >
+      <AnimatePresence mode="wait">
         <motion.div
-          key={currentTextIndex}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: showText ? 1 : 0 }}
           transition={{ duration: 1 }}
-          className="text-center px-4"
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
         >
-          <p className="text-3xl md:text-4xl text-white font-bold max-w-3xl mx-auto">
-            {introTexts[currentTextIndex]}
-          </p>
+          <motion.div
+            key={currentTextIndex}
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{
+              duration: 1,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="text-center px-4"
+          >
+            <motion.p
+              className="text-3xl md:text-4xl text-white font-bold max-w-3xl mx-auto"
+              style={{
+                textShadow: "0 0 20px rgba(255, 255, 255, 0.5)",
+              }}
+            >
+              {introTexts[currentTextIndex]}
+            </motion.p>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      </AnimatePresence>
     </div>
   );
 };

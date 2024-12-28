@@ -40,16 +40,24 @@ const JapaneseIntro: React.FC<JapaneseIntroProps> = ({ onComplete }) => {
       <AnimatePresence mode="wait">
         <motion.div
           key={currentTextIndex}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 1 }}
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+          transition={{
+            duration: 1,
+            ease: [0.22, 1, 0.36, 1],
+          }}
           className="fixed inset-0 flex items-center justify-center px-4"
         >
           <div className="text-center max-w-4xl mx-auto">
-            <p className="text-3xl md:text-4xl text-stone-800 font-japanese">
+            <motion.p
+              className="text-3xl md:text-4xl text-stone-800 font-japanese"
+              style={{
+                textShadow: "0 0 20px rgba(255, 255, 255, 0.8)",
+              }}
+            >
               {introTexts[currentTextIndex]}
-            </p>
+            </motion.p>
           </div>
         </motion.div>
       </AnimatePresence>
