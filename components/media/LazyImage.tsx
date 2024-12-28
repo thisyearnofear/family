@@ -1,10 +1,22 @@
-import CustomImage from "../ui/CustomImage";
-import { useState } from "react";
+import Image from "next/image";
+import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
+
+const DevImage = dynamic(
+  () => import("./DevImage").then((mod) => mod.default),
+  { ssr: false }
+);
 
 interface LazyImageProps {
   src: string;
   alt: string;
   className?: string;
+  priority?: boolean;
+  fill?: boolean;
+  width?: number;
+  height?: number;
+  sizes?: string;
+  quality?: number;
   onLoad?: () => void;
 }
 
@@ -12,27 +24,44 @@ const LazyImage: React.FC<LazyImageProps> = ({
   src,
   alt,
   className = "",
+  priority = false,
+  fill = false,
+  width,
+  height,
+  sizes = "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw",
+  quality = 75,
   onLoad,
 }) => {
-  const [isLoading, setIsLoading] = useState(true);
-
-  return (
-    <div className={`relative ${className}`}>
-      <CustomImage
+  if (process.env.NODE_ENV === "development") {
+    return (
+      <DevImage
         src={src}
         alt={alt}
-        className={`transition-opacity duration-700 ${
-          isLoading ? "opacity-0" : "opacity-100"
-        }`}
-        onLoad={() => {
-          setIsLoading(false);
-          onLoad?.();
-        }}
+        className={className}
+        fill={fill}
+        width={width}
+        height={height}
+        sizes={sizes}
+        priority={priority}
+        quality={quality}
+        onLoad={onLoad}
       />
-      {isLoading && (
-        <div className="absolute inset-0 bg-gray-100 animate-pulse" />
-      )}
-    </div>
+    );
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      className={className}
+      fill={fill}
+      width={width}
+      height={height}
+      sizes={sizes}
+      priority={priority}
+      quality={quality}
+      onLoad={onLoad}
+    />
   );
 };
 

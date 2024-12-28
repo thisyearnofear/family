@@ -14,10 +14,10 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
 
   const introTexts = [
-    "Family is a constant—a center of gravity, an anchor in the cosmos.",
-    "Every memory, an imprint of love, laughter, and togetherness, etched into the universe.",
-    "Our connection transcends distance, time, and space: stars bound in an unbreakable constellation.",
-    "Love is infinite, happiness innate, take a look ....",
+    "Family is constant — gravity's centre, anchor in the cosmos.",
+    "Every memory, an imprint of love, laughter, togetherness: etched in the universe.",
+    "Connection transcends distance, time, space: stars bound-unbreakable constellation.",
+    "Love is infinite. Happiness innate. Seeing, believing ....",
   ];
 
   useEffect(() => {
@@ -166,6 +166,17 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
           </motion.div>
         </motion.div>
       </AnimatePresence>
+
+      {/* Skip button - always visible */}
+      <motion.button
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        onClick={onComplete}
+        className="fixed bottom-8 right-8 px-6 py-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-medium transition-colors pointer-events-auto"
+      >
+        Skip Intro →
+      </motion.button>
     </div>
   );
 };

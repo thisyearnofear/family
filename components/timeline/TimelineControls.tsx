@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { IoPlaySharp, IoPauseSharp } from "react-icons/io5";
-import { BsVolumeUp, BsVolumeMute } from "react-icons/bs";
-import { MdNavigateNext, MdNavigateBefore } from "react-icons/md";
+import { SpeakerWaveIcon, SpeakerXMarkIcon } from "@heroicons/react/24/solid";
+import { PlayIcon, PauseIcon } from "@heroicons/react/24/solid";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
+import { MusicalNoteIcon } from "@heroicons/react/24/solid";
+import { useState, useEffect } from "react";
 
 interface TimelineControlsProps {
-  theme: "japanese" | "space";
+  theme: "space" | "japanese";
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
   volume: number;
@@ -75,7 +76,11 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                     showPreviousMonth ? hoverClass : disabledClass
                   }`}
                 >
-                  <MdNavigateBefore className={textClass} size={24} />
+                  <ChevronLeftIcon
+                    className={textClass}
+                    width={24}
+                    height={24}
+                  />
                 </button>
                 <span className={`text-base font-medium ${textClass}`}>
                   {currentMonth}
@@ -88,7 +93,7 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                       showNextMonth ? hoverClass : disabledClass
                     }`}
                   >
-                    <MdNavigateNext
+                    <ChevronRightIcon
                       className={`${textClass} transition-colors duration-500 ${
                         showReadyIndicator
                           ? isSpace
@@ -96,7 +101,8 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                             : "text-red-500"
                           : ""
                       }`}
-                      size={24}
+                      width={24}
+                      height={24}
                     />
                   </button>
                   {/* Loading progress circle */}
@@ -141,9 +147,9 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                   className={`p-1.5 rounded-full transition-colors ${hoverClass}`}
                 >
                   {isPlaying ? (
-                    <IoPauseSharp className={textClass} size={24} />
+                    <PauseIcon className={textClass} width={24} height={24} />
                   ) : (
-                    <IoPlaySharp className={textClass} size={24} />
+                    <PlayIcon className={textClass} width={24} height={24} />
                   )}
                 </button>
                 <button
@@ -151,9 +157,17 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                   className={`p-1.5 rounded-full transition-colors ${hoverClass}`}
                 >
                   {volume > 0 ? (
-                    <BsVolumeUp className={textClass} size={24} />
+                    <SpeakerWaveIcon
+                      className={textClass}
+                      width={24}
+                      height={24}
+                    />
                   ) : (
-                    <BsVolumeMute className={textClass} size={24} />
+                    <SpeakerXMarkIcon
+                      className={textClass}
+                      width={24}
+                      height={24}
+                    />
                   )}
                 </button>
               </div>
@@ -163,7 +177,11 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                   onClick={onPreviousTrack}
                   className={`p-1.5 rounded-full transition-colors ${hoverClass}`}
                 >
-                  <MdNavigateBefore className={textClass} size={20} />
+                  <ChevronLeftIcon
+                    className={textClass}
+                    width={20}
+                    height={20}
+                  />
                 </button>
                 {currentTrack && (
                   <span
@@ -176,7 +194,11 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                   onClick={onNextTrack}
                   className={`p-1.5 rounded-full transition-colors ${hoverClass}`}
                 >
-                  <MdNavigateNext className={textClass} size={20} />
+                  <ChevronRightIcon
+                    className={textClass}
+                    width={20}
+                    height={20}
+                  />
                 </button>
               </div>
             </div>
@@ -192,9 +214,9 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                   className={`p-2 rounded-full transition-colors ${hoverClass}`}
                 >
                   {isPlaying ? (
-                    <IoPauseSharp className={textClass} size={24} />
+                    <PauseIcon className={textClass} width={24} height={24} />
                   ) : (
-                    <IoPlaySharp className={textClass} size={24} />
+                    <PlayIcon className={textClass} width={24} height={24} />
                   )}
                 </button>
                 <button
@@ -202,11 +224,28 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                   className={`p-2 rounded-full transition-colors ${hoverClass}`}
                 >
                   {volume > 0 ? (
-                    <BsVolumeUp className={textClass} size={24} />
+                    <SpeakerWaveIcon
+                      className={textClass}
+                      width={24}
+                      height={24}
+                    />
                   ) : (
-                    <BsVolumeMute className={textClass} size={24} />
+                    <SpeakerXMarkIcon
+                      className={textClass}
+                      width={24}
+                      height={24}
+                    />
                   )}
                 </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={volume}
+                  onChange={(e) => setVolume(parseFloat(e.target.value))}
+                  className="w-24"
+                />
               </div>
 
               <div className="flex items-center gap-3">
@@ -214,7 +253,11 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                   onClick={onPreviousTrack}
                   className={`p-2 rounded-full transition-colors ${hoverClass}`}
                 >
-                  <MdNavigateBefore className={textClass} size={24} />
+                  <ChevronLeftIcon
+                    className={textClass}
+                    width={24}
+                    height={24}
+                  />
                 </button>
                 {currentTrack && (
                   <span
@@ -227,7 +270,11 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                   onClick={onNextTrack}
                   className={`p-2 rounded-full transition-colors ${hoverClass}`}
                 >
-                  <MdNavigateNext className={textClass} size={24} />
+                  <ChevronRightIcon
+                    className={textClass}
+                    width={24}
+                    height={24}
+                  />
                 </button>
               </div>
             </div>
@@ -242,7 +289,11 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                     showPreviousMonth ? hoverClass : disabledClass
                   }`}
                 >
-                  <MdNavigateBefore className={textClass} size={28} />
+                  <ChevronLeftIcon
+                    className={textClass}
+                    width={28}
+                    height={28}
+                  />
                 </button>
                 <motion.span
                   key={currentMonth}
@@ -261,7 +312,7 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                       showNextMonth ? hoverClass : disabledClass
                     } ${showReadyIndicator ? "scale-110" : ""}`}
                   >
-                    <MdNavigateNext
+                    <ChevronRightIcon
                       className={`${textClass} transition-colors duration-500 ${
                         showReadyIndicator
                           ? isSpace
@@ -269,11 +320,12 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
                             : "text-red-500"
                           : ""
                       }`}
-                      size={28}
+                      width={28}
+                      height={28}
                     />
                   </button>
 
-                  {/* Loading progress circle with smoother animation */}
+                  {/* Loading progress circle */}
                   {nextMonthLoadingProgress > 0 &&
                     nextMonthLoadingProgress < 100 && (
                       <motion.svg

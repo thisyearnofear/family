@@ -13,6 +13,7 @@ const nextConfig = {
     "react-use-keypress",
   ],
   images: {
+    domains: ["gateway.pinata.cloud"],
     remotePatterns: [
       {
         protocol: "https",
@@ -23,7 +24,7 @@ const nextConfig = {
     ],
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
-    unoptimized: true,
+    unoptimized: process.env.NODE_ENV === "development",
   },
   env: {
     PINATA_JWT: process.env.PINATA_JWT,

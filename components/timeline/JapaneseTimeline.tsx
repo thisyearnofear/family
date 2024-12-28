@@ -187,8 +187,7 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images }) => {
       setCurrentIndex((prev) => {
         if (prev >= images.length - 1) {
           setIsPlaying(false);
-          setHasCompletedFirstView(true);
-          return prev;
+          return images.length - 1; // Ensure we stay at the last image
         }
         return prev + 1;
       });
@@ -205,9 +204,14 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images }) => {
 
   // Handle month navigation
   const handleNextMonth = useCallback(() => {
+    if (currentMonthIndex === monthlyData.length - 1) {
+      // If we're at the last month, go to the last image
+      setCurrentIndex(images.length - 1);
+      return;
+    }
     if (!nextMonth) return;
     setCurrentIndex(nextMonth.startIndex);
-  }, [nextMonth]);
+  }, [nextMonth, currentMonthIndex, monthlyData.length, images.length]);
 
   const handlePreviousMonth = useCallback(() => {
     const prevMonthIndex = currentMonthIndex - 1;

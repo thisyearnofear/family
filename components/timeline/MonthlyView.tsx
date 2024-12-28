@@ -34,6 +34,7 @@ interface LoadingState {
 const HIGHLIGHT_DURATION = 4000; // 4 seconds per photo for better viewing
 const TRANSITION_DURATION = 0.6; // 0.6 seconds for smoother transitions
 const MONTH_TRANSITION_DURATION = 0.8; // 0.8 seconds for month transitions
+const HIGHLIGHT_INTERVAL = 4000; // 4 seconds per photo highlight
 
 const SONGS = [
   { path: "/sounds/background-music.mp3", title: "Hopes and Dreams" },
@@ -66,6 +67,10 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
   const [highlightedImage, setHighlightedImage] = useState<ImageProps | null>(
     null
   );
+  const [autoHighlightIndex, setAutoHighlightIndex] = useState<number | null>(
+    null
+  );
+  const [isAutoHighlighting, setIsAutoHighlighting] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
@@ -178,356 +183,115 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     return months;
   }, [images]);
 
-  // Find current month and next month
-  const currentMonthIndex = monthlyData.findIndex(
-    (month) =>
-      currentIndex >= month.startIndex &&
-      currentIndex < month.startIndex + month.images.length
-  );
+  // Find current month based on currentIndex
+  const { currentMonth, currentMonthIndex } = useMemo(() => {
+    const monthIndex = monthlyData.findIndex(
+      (month) =>
+        currentIndex >= month.startIndex &&
+        currentIndex < month.startIndex + month.images.length
+    );
+    return {
+      currentMonth: monthIndex >= 0 ? monthlyData[monthIndex] : null,
+      currentMonthIndex: monthIndex,
+    };
+  }, [monthlyData, currentIndex]);
 
-  const currentMonth = monthlyData[currentMonthIndex];
-  const nextMonth = monthlyData[currentMonthIndex + 1];
+  const handleImageLoad = (monthKey: string, index: number, total: number) => {
+    setLoadingStates((prev) => ({
+      ...prev,
+      [monthKey]: {
+        isLoading: (prev[monthKey]?.loadedCount || 0) + 1 < total,
+        loadedCount: (prev[monthKey]?.loadedCount || 0) + 1,
+        totalCount: total,
+      },
+    }));
+  };
 
-  // Handle image load completion
-  const handleImageLoad = useCallback(
-    (monthKey: string, imageIndex: number, totalImages: number) => {
-      console.log(
-        `Image ${imageIndex + 1}/${totalImages} loaded in ${monthKey}`
-      );
-
-      setLoadingStates((prev) => {
-        const currentState = prev[monthKey] || {
-          isLoading: true,
-          loadedCount: 0,
-          totalCount: totalImages,
-        };
-
-        const newLoadedCount = Math.min(
-          currentState.loadedCount + 1,
-          totalImages
-        );
-        const newState = {
-          ...prev,
-          [monthKey]: {
-            ...currentState,
-            loadedCount: newLoadedCount,
-            isLoading: newLoadedCount < totalImages,
-          },
-        };
-
-        console.log(
-          `${monthKey} loading progress: ${newLoadedCount}/${totalImages}`
-        );
-        return newState;
-      });
-    },
-    [setLoadingStates]
-  );
-
-  // Modify the preload effect to use cache
+  // Auto highlight timer
   useEffect(() => {
-    if (!currentMonth) return;
+    if (!currentMonth || !isAutoHighlighting) return;
 
-    // Debug logging for environment variables
-    console.log("Environment Variables Debug:");
-    console.log(
-      "NEXT_PUBLIC_PINATA_GATEWAY:",
-      process.env.NEXT_PUBLIC_PINATA_GATEWAY
-    );
-    console.log(
-      "NEXT_PUBLIC_PINATA_GROUP_ID:",
-      process.env.NEXT_PUBLIC_PINATA_GROUP_ID
-    );
-
-    // Test if we're in production
-    console.log("NODE_ENV:", process.env.NODE_ENV);
-    console.log("NEXT_PUBLIC_ENV:", process.env.NEXT_PUBLIC_ENV);
-
-    // Find the next two months to preload
-    const currentMonthIndex = monthlyData.findIndex(
-      (month) => month.key === currentMonth.key
-    );
-    const nextTwoMonths = monthlyData.slice(
-      currentMonthIndex + 1,
-      currentMonthIndex + 3
-    );
-
-    nextTwoMonths.forEach((month) => {
-      console.log(`Preloading month: ${month.month}`);
-      if (month.images && month.images.length > 0) {
-        console.log("Sample image hash:", month.images[0].ipfsHash);
-      }
-
-      // Initialize loading state for month if not exists
-      setLoadingStates((prev) => ({
-        ...prev,
-        [month.key]: prev[month.key] || {
-          isLoading: true,
-          loadedCount: 0,
-          totalCount: month.images.length,
-        },
-      }));
-
-      // Preload all images in the month using cache
-      month.images.forEach((image) => {
-        if (imageCache.has(image.ipfsHash)) {
-          // If image is already cached, mark it as loaded
-          handleImageLoad(
-            month.key,
-            month.images.indexOf(image),
-            month.images.length
-          );
-          return;
+    const timer = setInterval(() => {
+      setAutoHighlightIndex((prev) => {
+        if (prev === null || prev >= currentMonth.images.length - 1) {
+          return 0;
         }
-
-        const img = new Image();
-        const gateway =
-          process.env.NEXT_PUBLIC_PINATA_GATEWAY?.replace(/\/$/, "") ||
-          "https://gateway.pinata.cloud/ipfs";
-        const imageUrl = image.ipfsHash.startsWith("http")
-          ? image.ipfsHash
-          : `${gateway}/${image.ipfsHash}`;
-
-        // Debug logging for image URLs and construction
-        console.log("Image URL Construction:");
-        console.log("- Gateway:", gateway);
-        console.log("- IPFS Hash:", image.ipfsHash);
-        console.log("- Final URL:", imageUrl);
-
-        img.onload = () => {
-          console.log("Successfully loaded:", imageUrl);
-          imageCache.preload(image);
-          handleImageLoad(
-            month.key,
-            month.images.indexOf(image),
-            month.images.length
-          );
-        };
-
-        img.onerror = (error) => {
-          console.error("Failed to load image:", {
-            url: imageUrl,
-            error: error,
-            gateway: gateway,
-            hash: image.ipfsHash,
-          });
-          handleImageLoad(
-            month.key,
-            month.images.indexOf(image),
-            month.images.length
-          );
-        };
-
-        img.src = imageUrl;
+        return prev + 1;
       });
-    });
-  }, [
-    currentMonth?.key,
-    monthlyData,
-    imageCache,
-    handleImageLoad,
-    setLoadingStates,
-  ]);
+    }, HIGHLIGHT_INTERVAL);
 
-  // Auto-focus effect for gallery view
+    return () => clearInterval(timer);
+  }, [currentMonth, isAutoHighlighting]);
+
+  // Update highlighted image when auto highlight index changes
   useEffect(() => {
-    if (
-      !currentMonth ||
-      currentMonth.images.length <= 1 ||
-      loadingStates[currentMonth.key]?.isLoading
-    ) {
-      // Clear any existing highlight when conditions aren't met
-      setFocusedIndex(null);
-      setHighlightedImage(null);
-      return;
+    if (autoHighlightIndex !== null && currentMonth) {
+      setHighlightedImage(currentMonth.images[autoHighlightIndex]);
     }
+  }, [autoHighlightIndex, currentMonth]);
 
-    console.log(
-      `Starting cycle for ${currentMonth.month} with ${currentMonth.images.length} images`
-    );
-
-    let timeoutId: NodeJS.Timeout;
-    let transitionTimeoutId: NodeJS.Timeout;
-
-    const cycleImages = (index: number) => {
-      console.log(
-        `Cycling to image ${index + 1}/${currentMonth.images.length} in ${
-          currentMonth.month
-        }`
-      );
-
-      setFocusedIndex(index);
-      setHighlightedImage(currentMonth.images[index]);
-
-      // Schedule next image after highlight duration
-      timeoutId = setTimeout(() => {
-        console.log(
-          `Transitioning out image ${index + 1} in ${currentMonth.month}`
-        );
-        setHighlightedImage(null);
-
-        // Wait for transition out before moving to next image
-        transitionTimeoutId = setTimeout(() => {
-          const nextIndex = (index + 1) % currentMonth.images.length;
-          console.log(
-            `Moving to next image ${nextIndex + 1} in ${currentMonth.month}`
-          );
-          cycleImages(nextIndex);
-        }, TRANSITION_DURATION * 1000);
-      }, HIGHLIGHT_DURATION);
-    };
-
-    // Start the cycle
-    cycleImages(0);
-
-    // Cleanup function
-    return () => {
-      console.log(`Cleaning up cycle for ${currentMonth.month}`);
-      clearTimeout(timeoutId);
-      clearTimeout(transitionTimeoutId);
-      setFocusedIndex(null);
-      setHighlightedImage(null);
-    };
-  }, [currentMonth, loadingStates]);
-
-  // Reset carousel index when month changes
+  // Reset auto highlight when month changes
   useEffect(() => {
-    if (currentMonth?.key) {
-      setCarouselIndex(0);
-    }
+    setAutoHighlightIndex(0);
+    setIsAutoHighlighting(true);
   }, [currentMonth?.key]);
 
-  // Loading carousel effect
-  useEffect(() => {
-    const isMonthLoading =
-      currentMonth?.key && loadingStates[currentMonth.key]?.isLoading;
-    const hasMultipleImages = currentMonth?.images?.length > 1;
+  // Stop auto highlighting when user interacts
+  const handleImageClick = (image: ImageProps) => {
+    setIsAutoHighlighting(false);
+    setHighlightedImage(image);
+  };
 
-    if (!isMonthLoading || !hasMultipleImages || !currentMonth) return;
+  const renderTimelineControls = () => {
+    if (!currentMonth) return null;
 
-    const interval = setInterval(() => {
-      setCarouselIndex((prev) => (prev + 1) % currentMonth.images.length);
-    }, 800);
-
-    return () => clearInterval(interval);
-  }, [currentMonth, loadingStates, currentMonth?.images?.length]);
+    return (
+      <div className="flex justify-center gap-4 p-4 bg-gradient-to-t from-black/50 to-transparent">
+        <button
+          onClick={() => {
+            const prevMonthIndex = currentMonthIndex - 1;
+            if (prevMonthIndex >= 0) {
+              onImageClick?.(monthlyData[prevMonthIndex].startIndex);
+            }
+          }}
+          disabled={currentMonthIndex <= 0}
+          className="px-4 py-2 bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors"
+        >
+          Previous Month
+        </button>
+        <button
+          onClick={() => {
+            const nextMonthIndex = currentMonthIndex + 1;
+            if (nextMonthIndex < monthlyData.length) {
+              onImageClick?.(monthlyData[nextMonthIndex].startIndex);
+            }
+          }}
+          disabled={currentMonthIndex >= monthlyData.length - 1}
+          className="px-4 py-2 bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors"
+        >
+          Next Month
+        </button>
+      </div>
+    );
+  };
 
   // Check if we're at the end
   const isLastImage = currentIndex === images.length - 1;
 
-  // Render highlighted image overlay
-  const renderHighlightedImage = () => {
-    if (!highlightedImage) return null;
+  // Add loading indicator for final collage
+  const renderLoadingIndicator = () => {
+    const isSpace = theme === "space";
+    const textClass = isSpace ? "text-white" : "text-stone-800";
 
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        transition={{ duration: TRANSITION_DURATION, ease: "easeInOut" }}
-        className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-      >
-        <div className="relative w-full max-w-5xl h-[80vh] p-8">
-          <MemoryImage
-            image={highlightedImage}
-            className="rounded-lg shadow-2xl"
-            onLoad={() => {
-              /* Handle load complete */
-            }}
-          />
+      <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-t-transparent border-white rounded-full animate-spin mb-4" />
+          <p className={`${textClass} text-lg`}>Loading your memories...</p>
         </div>
-      </motion.div>
+      </div>
     );
   };
-
-  // Modify the grid rendering to include transitions
-  const renderPhotoGrid = () => (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-      {currentMonth?.images.map((image, idx) => (
-        <motion.div
-          key={image.ipfsHash}
-          className="relative aspect-square h-[200px] cursor-pointer group"
-          onClick={() => setHighlightedImage(image)}
-          animate={{
-            scale: focusedIndex === idx ? 1.05 : 1,
-            filter: focusedIndex === idx ? "brightness(1.1)" : "brightness(1)",
-            transition: { duration: 0.5 },
-          }}
-        >
-          <div
-            className={`absolute inset-0 z-10 transition-opacity duration-500 ${
-              focusedIndex === idx ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-            {theme === "japanese" ? (
-              <div className="absolute bottom-2 left-2 text-white text-sm font-japanese">
-                思い出 {idx + 1}
-              </div>
-            ) : (
-              <div className="absolute bottom-2 left-2 text-white text-sm">
-                Memory {idx + 1}
-              </div>
-            )}
-          </div>
-          <MemoryImage
-            image={image}
-            isInteractive
-            className={`rounded-lg shadow-md transition-all duration-500 ${
-              focusedIndex === idx
-                ? "shadow-lg ring-2 ring-white/30"
-                : "group-hover:scale-105"
-            }`}
-            onLoad={() =>
-              handleImageLoad(currentMonth.key, idx, currentMonth.images.length)
-            }
-          />
-        </motion.div>
-      ))}
-    </div>
-  );
-
-  // Calculate next month loading progress
-  const nextMonthLoadingProgress = useMemo(() => {
-    if (!nextMonth || !loadingStates[nextMonth.key]) return 0;
-    const { loadedCount, totalCount } = loadingStates[nextMonth.key];
-    return Math.round((loadedCount / totalCount) * 100);
-  }, [nextMonth, loadingStates]);
-
-  // Pass loading progress to TimelineControls
-  const renderTimelineControls = () => (
-    <TimelineControls
-      theme={theme}
-      isPlaying={isPlaying}
-      setIsPlaying={setIsPlaying}
-      volume={volume}
-      setVolume={setVolume}
-      currentTrack={`"${SONGS[currentSongIndex].title}" by Papa`}
-      firstView={!hasCompletedFirstView}
-      nextMonthLoadingProgress={nextMonthLoadingProgress}
-      onNextTrack={() =>
-        setCurrentSongIndex((prev) => (prev + 1) % SONGS.length)
-      }
-      onPreviousTrack={() =>
-        setCurrentSongIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length)
-      }
-      currentMonth={currentMonth?.month}
-      onNextMonth={() => {
-        const nextMonthIndex = currentMonthIndex + 1;
-        if (nextMonthIndex < monthlyData.length) {
-          onImageClick?.(monthlyData[nextMonthIndex].startIndex);
-        }
-      }}
-      onPreviousMonth={() => {
-        const prevMonthIndex = currentMonthIndex - 1;
-        if (prevMonthIndex >= 0) {
-          onImageClick?.(monthlyData[prevMonthIndex].startIndex);
-        }
-      }}
-      showNextMonth={currentMonthIndex < monthlyData.length - 1}
-      showPreviousMonth={currentMonthIndex > 0}
-    />
-  );
 
   // Render final collage
   if (isLastImage) {
@@ -542,6 +306,11 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     const altButtonBgClass = isSpace
       ? "bg-black/70 hover:bg-blue-900/70"
       : "bg-stone-800/70 hover:bg-stone-700/70";
+
+    // Check if all images are loaded
+    const isLoading = Object.values(loadingStates).some(
+      (state) => state.isLoading || state.loadedCount < state.totalCount
+    );
 
     return (
       <>
@@ -562,12 +331,12 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
                 }`}
               >
                 {isSpace ? (
-                  "Family Wrapped 2024"
+                  "A Year in Memories"
                 ) : (
                   <>
                     思い出の一年
                     <span className="block text-lg mt-2 text-stone-600">
-                      A Year of Memories
+                      A Year in Memories
                     </span>
                   </>
                 )}
@@ -602,12 +371,15 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: idx * 0.1 }}
                     className="relative aspect-square cursor-pointer group"
-                    onClick={() => onImageClick?.(idx)}
+                    onClick={() => setHighlightedImage(image)}
                   >
                     <MemoryImage
                       image={image}
                       isInteractive
                       className="rounded-lg shadow-md transition-transform group-hover:scale-105"
+                      onLoad={() =>
+                        handleImageLoad("final-collage", idx, images.length)
+                      }
                     />
                   </motion.div>
                 ))}
@@ -627,12 +399,55 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
             />
           )}
         </AnimatePresence>
+
+        {/* Loading indicator */}
+        <AnimatePresence>
+          {isLoading && renderLoadingIndicator()}
+        </AnimatePresence>
+
+        {/* Highlighted Image Overlay */}
+        <AnimatePresence>
+          {highlightedImage && (
+            <motion.div
+              key="highlighted-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+              onClick={() => {
+                setHighlightedImage(null);
+                setIsAutoHighlighting(true);
+              }}
+            >
+              <motion.div
+                className="relative w-full max-w-5xl h-[80vh]"
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.9 }}
+              >
+                <MemoryImage
+                  image={highlightedImage}
+                  className="rounded-lg shadow-2xl"
+                />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </>
     );
   }
 
+  // Render loading state
+  if (!currentMonth) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   // Render single image if month has only one image
-  if (currentMonth && currentMonth.images.length === 1) {
+  if (currentMonth.images.length === 1) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -652,185 +467,111 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
 
   // Render monthly collage
   return (
-    <AnimatePresence mode="wait">
-      {currentMonth && (
-        <motion.div
-          key={currentMonth.key}
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.98 }}
-          transition={{
-            type: "spring",
-            stiffness: 300,
-            damping: 30,
-            duration: MONTH_TRANSITION_DURATION,
-          }}
-          className="w-full h-full flex flex-col items-center p-4 gap-4 relative"
+    <motion.div
+      className="relative w-full h-full"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      {/* Title */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/50 to-transparent"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        exit={{ y: -100 }}
+      >
+        <motion.h2
+          layoutId={`month-title-${currentMonth.month}`}
+          className="text-3xl font-bold text-white text-center"
         >
-          {/* Fixed header with month title */}
-          <motion.div
-            className="fixed top-0 left-0 right-0 z-10 flex flex-col items-center pt-4 pb-2 bg-gradient-to-b from-black/50 to-transparent"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ delay: 0.2, duration: TRANSITION_DURATION }}
-          >
-            <motion.h2
-              className={`text-2xl ${
-                theme === "space"
-                  ? "text-white"
-                  : "font-japanese text-stone-800"
-              }`}
-              layoutId="month-title"
-            >
-              {currentMonth.month}
-            </motion.h2>
-          </motion.div>
+          {currentMonth.month}
+        </motion.h2>
+      </motion.div>
 
-          {/* Loading indicator with carousel */}
-          <AnimatePresence>
-            {loadingStates[currentMonth.key]?.isLoading &&
-              currentMonth.images.length > 1 && (
+      {/* Images */}
+      <motion.div
+        className="pt-24 pb-20 px-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+      >
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {currentMonth.images.map((image, index) => (
+            <motion.div
+              key={image.ipfsHash}
+              className="relative aspect-square rounded-lg overflow-hidden shadow-lg cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              onClick={() => handleImageClick(image)}
+              onHoverStart={() => {
+                setIsAutoHighlighting(false);
+                setFocusedIndex(index);
+              }}
+              onHoverEnd={() => setFocusedIndex(null)}
+            >
+              <MemoryImage
+                image={image}
+                isInteractive
+                className={`rounded-lg transition-all duration-300 ${
+                  focusedIndex === index || autoHighlightIndex === index
+                    ? "scale-110"
+                    : ""
+                }`}
+                onLoad={() =>
+                  handleImageLoad(
+                    currentMonth.key,
+                    index,
+                    currentMonth.images.length
+                  )
+                }
+              />
+              {(focusedIndex === index || autoHighlightIndex === index) && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm"
+                  className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"
                 >
-                  <motion.div
-                    initial={{ scale: 0.9 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0.9 }}
-                    className="w-full max-w-2xl h-[40vh] relative mb-8"
-                  >
-                    <motion.div
-                      key={carouselIndex}
-                      initial={{ opacity: 0, x: 100 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -100 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 30,
-                      }}
-                      className="absolute inset-0"
-                    >
-                      <MemoryImage
-                        image={currentMonth.images[carouselIndex]}
-                        className="rounded-lg shadow-xl opacity-75"
-                      />
-                    </motion.div>
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col items-center gap-4"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                      <span className="text-white text-lg">
-                        Loading...{" "}
-                        {loadingStates[currentMonth.key]?.loadedCount || 0}/
-                        {loadingStates[currentMonth.key]?.totalCount || 0}
-                      </span>
-                    </div>
-                    <div className="w-64 h-2 bg-white/20 rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full bg-white"
-                        initial={{ width: "0%" }}
-                        animate={{
-                          width: `${
-                            ((loadingStates[currentMonth.key]?.loadedCount ||
-                              0) /
-                              (loadingStates[currentMonth.key]?.totalCount ||
-                                1)) *
-                            100
-                          }%`,
-                        }}
-                        transition={{ duration: 0.3 }}
-                      />
-                    </div>
-                  </motion.div>
+                  <div className="absolute bottom-2 left-2 text-white text-sm">
+                    {theme === "japanese"
+                      ? `思い出 ${index + 1}`
+                      : `Memory ${index + 1}`}
+                  </div>
                 </motion.div>
               )}
-          </AnimatePresence>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
 
-          {/* Scrollable gallery with staggered animations */}
+      {/* Highlighted Image Overlay */}
+      <AnimatePresence>
+        {highlightedImage && (
           <motion.div
-            className="w-full max-w-6xl flex-1 overflow-y-auto mt-16"
+            key="highlighted-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => {
+              setHighlightedImage(null);
+              setIsAutoHighlighting(true);
+            }}
           >
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
-              {currentMonth?.images.map((image, idx) => (
-                <motion.div
-                  key={image.ipfsHash}
-                  initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.8, y: -20 }}
-                  transition={{
-                    delay: idx * 0.1,
-                    duration: TRANSITION_DURATION,
-                  }}
-                  className="relative aspect-square h-[200px] cursor-pointer group"
-                  onClick={() => setHighlightedImage(image)}
-                >
-                  <div
-                    className={`absolute inset-0 z-10 transition-opacity duration-500 ${
-                      focusedIndex === idx ? "opacity-100" : "opacity-0"
-                    }`}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                    {theme === "japanese" ? (
-                      <div className="absolute bottom-2 left-2 text-white text-sm font-japanese">
-                        思い出 {idx + 1}
-                      </div>
-                    ) : (
-                      <div className="absolute bottom-2 left-2 text-white text-sm">
-                        Memory {idx + 1}
-                      </div>
-                    )}
-                  </div>
-                  <MemoryImage
-                    image={image}
-                    isInteractive
-                    className={`rounded-lg shadow-md transition-all duration-500 ${
-                      focusedIndex === idx
-                        ? "shadow-lg ring-2 ring-white/30"
-                        : "group-hover:scale-105"
-                    }`}
-                    onLoad={() =>
-                      handleImageLoad(
-                        currentMonth.key,
-                        idx,
-                        currentMonth.images.length
-                      )
-                    }
-                  />
-                </motion.div>
-              ))}
-            </div>
+            <motion.div
+              className="relative w-full max-w-5xl h-[80vh]"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+            >
+              <MemoryImage
+                image={highlightedImage}
+                className="rounded-lg shadow-2xl"
+              />
+            </motion.div>
           </motion.div>
-
-          {/* Highlighted image overlay */}
-          <AnimatePresence mode="wait">
-            {renderHighlightedImage()}
-          </AnimatePresence>
-
-          {/* Fixed controls at the bottom */}
-          <motion.div
-            className="fixed bottom-0 left-0 right-0 z-10"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: TRANSITION_DURATION }}
-          >
-            {renderTimelineControls()}
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };
 

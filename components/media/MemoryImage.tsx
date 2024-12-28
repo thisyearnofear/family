@@ -1,6 +1,13 @@
-import CustomImage from "../ui/CustomImage";
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { ImageProps } from "../../utils/types/types";
+import type { ImageProps } from "../../utils/types/types";
+import dynamic from "next/dynamic";
+
+// Dynamically import DevImage only in development
+const DevImage = dynamic(
+  () => import("./DevImage").then((mod) => mod.default),
+  { ssr: false }
+);
 
 interface MemoryImageProps {
   image: ImageProps;
@@ -17,24 +24,64 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
   className = "",
   isInteractive = false,
 }) => {
+  const gateway =
+    process.env.NEXT_PUBLIC_PINATA_GATEWAY?.replace(/\/$/, "") ||
+    "https://gateway.pinata.cloud/ipfs";
   const imageUrl = image.ipfsHash.startsWith("http")
     ? image.ipfsHash
-    : `${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${image.ipfsHash}`;
+    : `${gateway}/${image.ipfsHash}`;
+
+  if (process.env.NODE_ENV === "development") {
+    return (
+      <motion.div
+        className={`relative w-full h-full overflow-hidden ${
+          isInteractive ? "cursor-pointer" : ""
+        }`}
+        whileHover={
+          isInteractive
+            ? {
+                scale: 1.05,
+                transition: { duration: 0.2 },
+              }
+            : undefined
+        }
+      >
+        <DevImage
+          src={imageUrl}
+          alt={image.description || "Memory"}
+          className={`object-cover ${className}`}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          priority={priority}
+          quality={75}
+          onLoad={onLoad}
+        />
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className={`relative w-full h-full ${
+      className={`relative w-full h-full overflow-hidden ${
         isInteractive ? "cursor-pointer" : ""
       }`}
+      whileHover={
+        isInteractive
+          ? {
+              scale: 1.05,
+              transition: { duration: 0.2 },
+            }
+          : undefined
+      }
     >
-      <CustomImage
+      <Image
         src={imageUrl}
         alt={image.description || "Memory"}
-        className={`object-cover w-full h-full ${className}`}
+        className={`object-cover ${className}`}
+        fill
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         priority={priority}
+        quality={75}
         onLoad={onLoad}
       />
     </motion.div>

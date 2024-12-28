@@ -113,10 +113,10 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images }) => {
   }, [nextMonth, loadingStates]);
 
   const introTexts = [
-    "Family is a constant—a center of gravity, an anchor in the cosmos.",
-    "Every memory, an imprint of love, laughter, and togetherness, etched into the universe.",
-    "Our connection transcends distance, time, and space: stars bound in an unbreakable constellation.",
-    "Love is infinite, happiness innate, take a look ....",
+    "Family is constant — gravity's centre, anchor in the cosmos.",
+    "Every memory, an imprint of love, laughter, togetherness: etched in the universe.",
+    "Connection transcends distance, time, space: stars bound-unbreakable constellation.",
+    "Love is infinite. Happiness innate. Seeing, believing ....",
   ];
 
   // Sound setup with proper cleanup
@@ -187,7 +187,8 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images }) => {
     const timer = setInterval(() => {
       setCurrentIndex((prev) => {
         if (prev >= images.length - 1) {
-          return prev;
+          setIsPlaying(false);
+          return images.length - 1; // Ensure we stay at the last image
         }
         return prev + 1;
       });
@@ -317,9 +318,14 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images }) => {
 
   // Handle month navigation
   const handleNextMonth = useCallback(() => {
+    if (currentMonthIndex === monthlyData.length - 1) {
+      // If we're at the last month, go to the last image
+      setCurrentIndex(images.length - 1);
+      return;
+    }
     if (!nextMonth) return;
     setCurrentIndex(nextMonth.startIndex);
-  }, [nextMonth]);
+  }, [nextMonth, currentMonthIndex, monthlyData.length, images.length]);
 
   const handlePreviousMonth = useCallback(() => {
     const prevMonthIndex = currentMonthIndex - 1;

@@ -12,10 +12,10 @@ const JapaneseIntro: React.FC<JapaneseIntroProps> = ({ onComplete }) => {
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
 
   const introTexts = [
-    "Family is a constant — a center of gravity, anchor in the cosmos.",
-    "Every memory, an imprint of love, laughter, and togetherness, etched into the universe.",
-    "Our connection transcends distance, time, and space: stars bound in an unbreakable constellation.",
-    "Love is infinite, happiness innate, take a look ....",
+    "Family is constant — gravity's centre, anchor in the cosmos.",
+    "Every memory, an imprint of love, laughter, togetherness: etched in the universe.",
+    "Connection transcends distance, time, space: stars bound-unbreakable constellation.",
+    "Love is infinite. Happiness innate. Seeing, believing ....",
   ];
 
   useEffect(() => {
@@ -61,6 +61,17 @@ const JapaneseIntro: React.FC<JapaneseIntroProps> = ({ onComplete }) => {
           </div>
         </motion.div>
       </AnimatePresence>
+
+      {/* Skip button - always visible */}
+      <motion.button
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        onClick={onComplete}
+        className="fixed bottom-8 right-8 px-6 py-3 rounded-full bg-stone-900/10 hover:bg-stone-900/20 backdrop-blur-sm text-stone-900 font-medium transition-colors"
+      >
+        Skip Intro →
+      </motion.button>
     </div>
   );
 };
