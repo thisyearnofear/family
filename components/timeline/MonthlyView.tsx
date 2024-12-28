@@ -270,11 +270,23 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     const lastMonth = monthlyData[monthlyData.length - 2]; // -2 because -1 is the gallery
     if (!lastMonth) return false;
 
+    // Ensure the currentIndex is beyond the last month's images
     return (
       currentIndex >= lastMonth.startIndex + lastMonth.images.length ||
       currentMonth?.key === "gallery"
     );
   }, [monthlyData, currentIndex, currentMonth]);
+
+  // Adjust navigation logic to allow transition to gallery
+  const handleNextMonth = useCallback(() => {
+    const nextMonthIndex = currentMonthIndex + 1;
+    if (nextMonthIndex < monthlyData.length) {
+      onImageClick?.(monthlyData[nextMonthIndex].startIndex);
+    } else if (nextMonthIndex === monthlyData.length) {
+      // Transition to gallery
+      onImageClick?.(monthlyData[nextMonthIndex - 1].startIndex);
+    }
+  }, [currentMonthIndex, monthlyData, onImageClick]);
 
   // Render timeline controls with highlight toggle
   const renderTimelineControls = () => {

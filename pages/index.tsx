@@ -132,6 +132,7 @@ export default function Home({ images, error, debug }: HomeProps) {
 
   const { theme } = useTheme();
   const [hasSelectedTheme, setHasSelectedTheme] = useState(false);
+  const [isAutoHighlighting, setIsAutoHighlighting] = useState(true);
 
   // Show error if there is one
   if (error) {
@@ -173,9 +174,17 @@ export default function Home({ images, error, debug }: HomeProps) {
 
       <PageTransition isPresent={hasSelectedTheme} theme={theme}>
         {theme === "space" ? (
-          <SpaceTimeline images={images} />
+          <SpaceTimeline
+            images={images}
+            isAutoHighlighting={isAutoHighlighting}
+            setIsAutoHighlighting={setIsAutoHighlighting}
+          />
         ) : (
-          <JapaneseTimeline images={images} />
+          <JapaneseTimeline
+            images={images}
+            isAutoHighlighting={isAutoHighlighting}
+            setIsAutoHighlighting={setIsAutoHighlighting}
+          />
         )}
       </PageTransition>
     </>

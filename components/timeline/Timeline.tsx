@@ -10,6 +10,7 @@ interface TimelineProps {
 
 interface ThemeComponentProps {
   images: ImageProps[];
+  // Add any other shared props here
 }
 
 const Timeline: React.FC<TimelineProps> = ({ images }) => {
@@ -20,7 +21,7 @@ const Timeline: React.FC<TimelineProps> = ({ images }) => {
 
   // Dynamically import themes to reduce initial bundle size
   const SpaceTimeline = dynamic<ThemeComponentProps>(
-    () => import("./SpaceTimeline"),
+    () => import("./SpaceTimeline").then((mod) => mod.default as any),
     {
       loading: () => {
         console.log("Loading SpaceTimeline component...");
@@ -29,7 +30,7 @@ const Timeline: React.FC<TimelineProps> = ({ images }) => {
     }
   );
   const JapaneseTimeline = dynamic<ThemeComponentProps>(
-    () => import("./JapaneseTimeline"),
+    () => import("./JapaneseTimeline").then((mod) => mod.default as any),
     {
       loading: () => {
         console.log("Loading JapaneseTimeline component...");

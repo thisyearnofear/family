@@ -14,6 +14,8 @@ const ZenBackground = dynamic(() => import("../themes/ZenBackground"), {
 
 interface JapaneseTimelineProps {
   images: ImageProps[];
+  isAutoHighlighting: boolean;
+  setIsAutoHighlighting: (value: boolean) => void;
 }
 
 interface LoadingState {
@@ -42,7 +44,11 @@ const SONGS = [
   { path: "/sounds/baba.mp3", title: "Baba, I Understand" },
 ];
 
-const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images }) => {
+const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({
+  images,
+  isAutoHighlighting,
+  setIsAutoHighlighting,
+}) => {
   console.log("JapaneseTimeline Component Mounted", {
     imagesCount: images?.length,
   });
@@ -257,6 +263,8 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images }) => {
         onPreviousMonth={handlePreviousMonth}
         showNextMonth={!!nextMonth && !loadingStates[nextMonth.key]?.isLoading}
         showPreviousMonth={currentMonthIndex > 0}
+        isAutoHighlighting={isAutoHighlighting}
+        setIsAutoHighlighting={setIsAutoHighlighting}
       />
     </div>
   );

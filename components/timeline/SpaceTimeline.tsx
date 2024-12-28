@@ -8,6 +8,8 @@ import type { ImageProps } from "../../utils/types/types";
 
 interface SpaceTimelineProps {
   images: ImageProps[];
+  isAutoHighlighting: boolean;
+  setIsAutoHighlighting: (value: boolean) => void;
 }
 
 interface MonthData {
@@ -32,7 +34,11 @@ const SONGS = [
   { path: "/sounds/baba.mp3", title: "Baba, I Understand" },
 ];
 
-const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images }) => {
+const SpaceTimeline: React.FC<SpaceTimelineProps> = ({
+  images,
+  isAutoHighlighting,
+  setIsAutoHighlighting,
+}) => {
   console.log("SpaceTimeline Component Mounted", {
     imagesCount: images?.length,
   });
@@ -394,6 +400,8 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images }) => {
                 !!nextMonth && !loadingStates[nextMonth.key]?.isLoading
               }
               showPreviousMonth={currentMonthIndex > 0}
+              isAutoHighlighting={isAutoHighlighting}
+              setIsAutoHighlighting={setIsAutoHighlighting}
             />
           </>
         )}
