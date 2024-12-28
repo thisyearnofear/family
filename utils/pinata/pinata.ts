@@ -51,10 +51,41 @@ export const getImages = async (groupId: string): Promise<ImageProps[]> => {
 
     if (!process.env.PINATA_JWT) {
       console.error("getImages: PINATA_JWT is not defined");
-      throw new Error("PINATA_JWT is not defined");
+      throw new Error("PINATA_JWT is not configured");
     }
 
-    const response = await fetch(
+    // First, try to fetch the group JSON directly
+    const groupResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${groupId}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (groupResponse.ok) {
+      console.log("getImages: Successfully fetched group JSON");
+      const groupData = await groupResponse.json();
+      console.log("getImages: Group data:", {
+        hasImages: !!groupData.images,
+        imageCount: groupData.images?.length,
+      });
+
+      if (groupData.images && Array.isArray(groupData.images)) {
+        return groupData.images.map((image: any, index: number) => ({
+          id: index,
+          ipfsHash: image.ipfsHash,
+          name: image.name || `Image ${index + 1}`,
+          description: image.description || null,
+          dateModified: image.dateModified || new Date().toISOString(),
+          width: image.width || 1280,
+          height: image.height || 720,
+        }));
+      }
+    }
+
+    // If group JSON fetch fails, try the pin list API
+    console.log("getImages: Falling back to pin list API");
+    const pinListResponse = await fetch(
       `https://api.pinata.cloud/data/pinList?status=pinned&metadata[keyvalues][groupId][value]=${groupId}&metadata[keyvalues][groupId][op]=eq`,
       {
         method: "GET",
@@ -64,31 +95,45 @@ export const getImages = async (groupId: string): Promise<ImageProps[]> => {
       }
     );
 
-    if (!response.ok) {
+    if (!pinListResponse.ok) {
       console.error("getImages: Pinata API error:", {
-        status: response.status,
-        statusText: response.statusText,
+        status: pinListResponse.status,
+        statusText: pinListResponse.statusText,
       });
-      const errorText = await response.text();
+      const errorText = await pinListResponse.text();
       console.error("getImages: Error response:", errorText);
       throw new Error(
-        `Pinata API error: ${response.status} ${response.statusText}`
+        `Pinata API error: ${pinListResponse.status} ${pinListResponse.statusText}`
       );
     }
 
-    const data = await response.json();
-    console.log("getImages: Received rows count:", data.rows?.length);
+    const data = await pinListResponse.json();
+    console.log("getImages: Received pin list response:", {
+      hasRows: !!data.rows,
+      rowCount: data.rows?.length,
+      count: data.count,
+      firstRow: data.rows?.[0]
+        ? {
+            hash: data.rows[0].ipfs_pin_hash,
+            hasMetadata: !!data.rows[0].metadata,
+            hasKeyValues: !!data.rows[0].metadata?.keyvalues,
+          }
+        : null,
+    });
 
     if (!data.rows) {
       console.error("getImages: No rows in response");
       return [];
     }
 
-    const images = data.rows.map((row: any) => ({
+    const images = data.rows.map((row: any, index: number) => ({
+      id: index,
       ipfsHash: row.ipfs_pin_hash,
-      name: row.metadata.name,
-      description: row.metadata.keyvalues.description,
-      dateModified: row.date_pinned,
+      name: row.metadata?.name || `Image ${row.ipfs_pin_hash.slice(0, 8)}`,
+      description: row.metadata?.keyvalues?.description || null,
+      dateModified: row.date_pinned || new Date().toISOString(),
+      width: row.metadata?.keyvalues?.width || 1280,
+      height: row.metadata?.keyvalues?.height || 720,
     }));
 
     console.log("getImages: Processed images count:", images.length);

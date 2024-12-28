@@ -7,6 +7,7 @@ export interface ImageProps {
   dateModified: string; // ISO date string
   name: string;
   blurDataUrl?: string;
+  description: string | null;
 }
 
 export interface SharedModalProps {
