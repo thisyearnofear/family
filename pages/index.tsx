@@ -11,15 +11,36 @@ import type { GetServerSideProps } from "next";
 interface HomeProps {
   images: ImageProps[];
   error?: string;
+  debug?: {
+    env: string;
+    hasJwt: boolean;
+    hasGroupId: boolean;
+    imagesCount?: number;
+    error?: boolean;
+  };
 }
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    console.log("Starting getServerSideProps");
+    // Log the entire context and environment for debugging
+    console.log("=== SERVER SIDE PROPS START ===");
+    console.log("Context:", {
+      ...context,
+      req: {
+        ...context.req,
+        headers: context.req?.headers,
+        url: context.req?.url,
+      },
+    });
+
     console.log("Environment variables:", {
+      NODE_ENV: process.env.NODE_ENV,
+      VERCEL_ENV: process.env.VERCEL_ENV,
+      NETLIFY_ENV: process.env.NETLIFY_ENV,
+      NETLIFY: process.env.NETLIFY,
       PINATA_JWT: !!process.env.PINATA_JWT,
       PINATA_GROUP_ID: process.env.PINATA_GROUP_ID,
-      NODE_ENV: process.env.NODE_ENV,
+      NEXT_PUBLIC_PINATA_GATEWAY: process.env.NEXT_PUBLIC_PINATA_GATEWAY,
     });
 
     // Use environment variable directly instead of query param for production
@@ -28,20 +49,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     if (!groupId) {
       console.error("No PINATA_GROUP_ID found in environment variables");
-      return {
-        props: {
-          images: [],
-        },
-      };
+      throw new Error("PINATA_GROUP_ID is not configured");
     }
 
     if (!process.env.PINATA_JWT) {
       console.error("No PINATA_JWT found in environment variables");
-      return {
-        props: {
-          images: [],
-        },
-      };
+      throw new Error("PINATA_JWT is not configured");
     }
 
     console.log("Fetching images with groupId:", groupId);
@@ -49,7 +62,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     console.log("Fetched images count:", images.length);
 
     if (!images.length) {
-      console.error("No images returned from Pinata");
+      console.warn("No images returned from Pinata");
     }
 
     // Sort images by dateModified
@@ -60,10 +73,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       );
     });
     console.log("Sorted images count:", sortedImages.length);
+    console.log("=== SERVER SIDE PROPS END ===");
 
     return {
       props: {
         images: sortedImages,
+        debug: {
+          env: process.env.NODE_ENV,
+          hasJwt: !!process.env.PINATA_JWT,
+          hasGroupId: !!process.env.PINATA_GROUP_ID,
+          imagesCount: sortedImages.length,
+        },
       },
     };
   } catch (error) {
@@ -78,30 +98,38 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       props: {
         images: [],
         error: error instanceof Error ? error.message : "Unknown error",
+        debug: {
+          env: process.env.NODE_ENV,
+          hasJwt: !!process.env.PINATA_JWT,
+          hasGroupId: !!process.env.PINATA_GROUP_ID,
+          error: true,
+        },
       },
     };
   }
 };
 
-export default function Home({ images, error }: HomeProps) {
+export default function Home({ images, error, debug }: HomeProps) {
   console.log("Home Page Mounted", {
     imagesCount: images.length,
     hasError: !!error,
+    debug,
   });
 
   useEffect(() => {
     try {
       console.log("Home Page Effect Running");
-      console.log("Environment Check:", {
+      console.log("Client Environment Check:", {
         gateway: process.env.NEXT_PUBLIC_PINATA_GATEWAY,
         nodeEnv: process.env.NODE_ENV,
         imagesLoaded: images.length,
         error,
+        debug,
       });
     } catch (error) {
       console.error("Error in Home page mount:", error);
     }
-  }, [images.length, error]);
+  }, [images.length, error, debug]);
 
   const { theme } = useTheme();
   const [hasSelectedTheme, setHasSelectedTheme] = useState(false);
@@ -115,6 +143,12 @@ export default function Home({ images, error }: HomeProps) {
             Error Loading Images
           </h1>
           <p className="text-gray-700">{error}</p>
+          <div className="mt-4 p-4 bg-gray-50 rounded text-sm">
+            <h2 className="font-semibold mb-2">Debug Information:</h2>
+            <pre className="whitespace-pre-wrap">
+              {JSON.stringify(debug, null, 2)}
+            </pre>
+          </div>
           <p className="text-sm text-gray-500 mt-4">
             Please try refreshing the page or contact support if the issue
             persists.

@@ -4,9 +4,20 @@
 
 [build.environment]
   NEXT_TELEMETRY_DISABLED = "1"
+  NODE_VERSION = "18.20.5"
+  NPM_VERSION = "10.8.2"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+  [plugins.inputs]
+    debug = true
 
 [functions]
-  included_files = ["utils/**"] 
+  included_files = ["utils/**"]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/___netlify-server-handler"
+  status = 200
+  force = true 
