@@ -13,9 +13,15 @@ const nextConfig = {
     "react-use-keypress",
   ],
   images: {
-    loader: "custom",
-    loaderFile: "./utils/image-loader.ts",
-    unoptimized: true,
+    domains: ["gateway.pinata.cloud"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.pinata.cloud",
+        port: "",
+        pathname: "/ipfs/**",
+      },
+    ],
   },
   env: {
     PINATA_JWT: process.env.PINATA_JWT,

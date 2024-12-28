@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { useState } from "react";
 import type { ImageProps } from "../../utils/types/types";
-import imageLoader from "../../utils/image-loader";
 
 interface MemoryImageProps {
   image: ImageProps;
@@ -18,10 +17,18 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
 
+  // Construct the full URL for the image
+  const imageUrl = image.ipfsHash.startsWith("http")
+    ? image.ipfsHash
+    : `${
+        process.env.NEXT_PUBLIC_PINATA_GATEWAY?.replace(/\/$/, "") ||
+        "https://gateway.pinata.cloud/ipfs"
+      }/${image.ipfsHash}`;
+
   return (
     <div className={`relative w-full h-full ${className}`}>
       <Image
-        src={image.ipfsHash}
+        src={imageUrl}
         alt={`Image taken on ${image.dateTaken || "unknown date"}`}
         className={`object-cover transition-opacity duration-700 ${
           isLoading ? "opacity-0" : "opacity-100"
@@ -30,7 +37,6 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         quality={90}
         priority={false}
-        loader={imageLoader}
         onLoadingComplete={() => {
           setIsLoading(false);
           onLoad?.();
