@@ -656,28 +656,36 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
       {currentMonth && (
         <motion.div
           key={currentMonth.key}
-          initial={{ opacity: 0, scale: 0.98, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.98, y: -20 }}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
           transition={{
             type: "spring",
             stiffness: 300,
             damping: 30,
-            duration: 0.5,
+            duration: MONTH_TRANSITION_DURATION,
           }}
-          className="w-full h-full flex flex-col items-center p-4 gap-4"
+          className="w-full h-full flex flex-col items-center p-4 gap-4 relative"
         >
-          <motion.h2
+          {/* Fixed header with month title */}
+          <motion.div
+            className="fixed top-0 left-0 right-0 z-10 flex flex-col items-center pt-4 pb-2 bg-gradient-to-b from-black/50 to-transparent"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ delay: 0.2 }}
-            className={`text-2xl ${
-              theme === "space" ? "text-white" : "font-japanese text-stone-800"
-            }`}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ delay: 0.2, duration: TRANSITION_DURATION }}
           >
-            {currentMonth.month}
-          </motion.h2>
+            <motion.h2
+              className={`text-2xl ${
+                theme === "space"
+                  ? "text-white"
+                  : "font-japanese text-stone-800"
+              }`}
+              layoutId="month-title"
+            >
+              {currentMonth.month}
+            </motion.h2>
+          </motion.div>
 
           {/* Loading indicator with carousel */}
           <AnimatePresence>
@@ -749,7 +757,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
 
           {/* Scrollable gallery with staggered animations */}
           <motion.div
-            className="w-full max-w-6xl flex-1 overflow-y-auto"
+            className="w-full max-w-6xl flex-1 overflow-y-auto mt-16"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -760,11 +768,10 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
                   key={image.ipfsHash}
                   initial={{ opacity: 0, scale: 0.8, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, y: -20 }}
                   transition={{
                     delay: idx * 0.1,
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 30,
+                    duration: TRANSITION_DURATION,
                   }}
                   className="relative aspect-square h-[200px] cursor-pointer group"
                   onClick={() => setHighlightedImage(image)}
@@ -807,10 +814,20 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
           </motion.div>
 
           {/* Highlighted image overlay */}
-          <AnimatePresence>{renderHighlightedImage()}</AnimatePresence>
+          <AnimatePresence mode="wait">
+            {renderHighlightedImage()}
+          </AnimatePresence>
 
-          {/* Use the new renderTimelineControls function */}
-          {renderTimelineControls()}
+          {/* Fixed controls at the bottom */}
+          <motion.div
+            className="fixed bottom-0 left-0 right-0 z-10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: TRANSITION_DURATION }}
+          >
+            {renderTimelineControls()}
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
