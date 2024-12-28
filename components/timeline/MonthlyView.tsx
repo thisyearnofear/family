@@ -183,6 +183,9 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
   useEffect(() => {
     if (!currentMonth) return;
 
+    // Debug logging for environment variables
+    console.log("PINATA_GATEWAY:", process.env.NEXT_PUBLIC_PINATA_GATEWAY);
+
     // Find the next two months to preload
     const currentMonthIndex = monthlyData.findIndex(
       (month) => month.key === currentMonth.key
@@ -225,7 +228,11 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
           ? image.ipfsHash
           : `${gateway}/${image.ipfsHash}`;
 
+        // Debug logging for image URLs
+        console.log("Loading image:", imageUrl);
+
         img.onload = () => {
+          console.log("Successfully loaded:", imageUrl);
           imageCache.preload(image);
           handleImageLoad(
             month.key,
@@ -234,8 +241,8 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
           );
         };
 
-        img.onerror = () => {
-          console.error(`Failed to preload image: ${imageUrl}`);
+        img.onerror = (error) => {
+          console.error(`Failed to preload image: ${imageUrl}`, error);
           handleImageLoad(
             month.key,
             month.images.indexOf(image),
