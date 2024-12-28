@@ -76,6 +76,20 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [hasCompletedFirstView, setHasCompletedFirstView] = useState(false);
 
+  // Initialize loading state for final collage
+  useEffect(() => {
+    if (!loadingStates["final-collage"]) {
+      setLoadingStates((prev) => ({
+        ...prev,
+        "final-collage": {
+          isLoading: true,
+          loadedCount: 0,
+          totalCount: images.length,
+        },
+      }));
+    }
+  }, [loadingStates, images.length, setLoadingStates]);
+
   // Add error boundary
   useEffect(() => {
     try {
@@ -302,6 +316,18 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     );
   };
 
+  // Handle image load for final collage
+  const handleFinalCollageImageLoad = (index: number) => {
+    setLoadingStates((prev) => ({
+      ...prev,
+      "final-collage": {
+        isLoading: false,
+        loadedCount: (prev["final-collage"]?.loadedCount || 0) + 1,
+        totalCount: images.length,
+      },
+    }));
+  };
+
   // Render final collage
   if (isReviewStage) {
     const isSpace = theme === "space";
@@ -320,32 +346,6 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     const isLoading = Object.values(loadingStates).some(
       (state) => state.isLoading || state.loadedCount < state.totalCount
     );
-
-    // Initialize loading state for final collage if not exists
-    useEffect(() => {
-      if (!loadingStates["final-collage"]) {
-        setLoadingStates((prev) => ({
-          ...prev,
-          "final-collage": {
-            isLoading: true,
-            loadedCount: 0,
-            totalCount: images.length,
-          },
-        }));
-      }
-    }, [loadingStates, images.length]);
-
-    // Handle image load for final collage
-    const handleImageLoad = (index: number) => {
-      setLoadingStates((prev) => ({
-        ...prev,
-        "final-collage": {
-          isLoading: false,
-          loadedCount: (prev["final-collage"]?.loadedCount || 0) + 1,
-          totalCount: images.length,
-        },
-      }));
-    };
 
     return (
       <>
@@ -412,7 +412,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
                       image={image}
                       isInteractive
                       className="rounded-lg shadow-md transition-transform group-hover:scale-105"
-                      onLoad={() => handleImageLoad(idx)}
+                      onLoad={() => handleFinalCollageImageLoad(idx)}
                     />
                   </motion.div>
                 ))}
