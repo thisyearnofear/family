@@ -16,14 +16,12 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
   onLoad,
 }) => {
   const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
 
   // Construct the full URL for the image
   const imageUrl = image.ipfsHash.startsWith("http")
     ? image.ipfsHash
-    : `${
-        process.env.NEXT_PUBLIC_PINATA_GATEWAY?.replace(/\/$/, "") ||
-        "https://gateway.pinata.cloud/ipfs"
-      }/${image.ipfsHash}`;
+    : `https://gateway.pinata.cloud/ipfs/${image.ipfsHash}`;
 
   return (
     <div className={`relative w-full h-full ${className}`}>
@@ -31,7 +29,7 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
         src={imageUrl}
         alt={`Image taken on ${image.dateTaken || "unknown date"}`}
         className={`object-cover transition-opacity duration-700 ${
-          isLoading ? "opacity-0" : "opacity-100"
+          isLoading || isError ? "opacity-0" : "opacity-100"
         } ${isInteractive ? "cursor-pointer" : ""}`}
         fill
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -41,9 +39,23 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
           setIsLoading(false);
           onLoad?.();
         }}
+        onError={() => {
+          console.error("Failed to load image:", imageUrl);
+          setIsError(true);
+          setIsLoading(false);
+        }}
+        unoptimized={process.env.NODE_ENV === "development"}
       />
-      {isLoading && (
-        <div className="absolute inset-0 bg-gray-100 animate-pulse" />
+      {(isLoading || isError) && (
+        <div
+          className={`absolute inset-0 ${
+            isError ? "bg-red-100" : "bg-gray-100"
+          } animate-pulse flex items-center justify-center`}
+        >
+          {isError && (
+            <span className="text-red-500 text-sm">Failed to load image</span>
+          )}
+        </div>
       )}
     </div>
   );
