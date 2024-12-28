@@ -13,6 +13,7 @@ const nextConfig = {
     "react-use-keypress",
   ],
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
@@ -27,7 +28,6 @@ const nextConfig = {
     ],
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
-    unoptimized: process.env.NODE_ENV === "development",
   },
   env: {
     PINATA_JWT: process.env.PINATA_JWT,
