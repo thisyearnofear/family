@@ -194,10 +194,10 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
       currentStartIndex++;
     });
 
-    // Add a final "Review" stage
+    // Add the gallery as the final month
     months.push({
-      key: "year-review",
-      month: "Year in Review",
+      key: "gallery",
+      month: "Gallery",
       images: sortedImages,
       startIndex: currentStartIndex,
     });
@@ -210,7 +210,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     const monthIndex = monthlyData.findIndex(
       (month) =>
         currentIndex >= month.startIndex &&
-        (month.key === "year-review" ||
+        (month.key === "gallery" ||
           currentIndex < month.startIndex + month.images.length)
     );
     return {
@@ -265,41 +265,65 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     setHighlightedImage(image);
   };
 
+  // Calculate if we should show the review stage
+  const shouldShowReview = useMemo(() => {
+    const lastMonth = monthlyData[monthlyData.length - 2]; // -2 because -1 is the review stage
+    if (!lastMonth) return false;
+
+    return currentIndex >= lastMonth.startIndex + lastMonth.images.length;
+  }, [monthlyData, currentIndex]);
+
+  // Render timeline controls with highlight toggle
   const renderTimelineControls = () => {
     if (!currentMonth) return null;
 
+    const isSpace = theme === "space";
+    const buttonClass = isSpace
+      ? "bg-blue-600/70 hover:bg-blue-700/70"
+      : "bg-red-600/70 hover:bg-red-700/70";
+
     return (
-      <div className="flex justify-center gap-4 p-4 bg-gradient-to-t from-black/50 to-transparent">
-        <button
-          onClick={() => {
-            const prevMonthIndex = currentMonthIndex - 1;
-            if (prevMonthIndex >= 0) {
-              onImageClick?.(monthlyData[prevMonthIndex].startIndex);
-            }
-          }}
-          disabled={currentMonthIndex <= 0}
-          className="px-4 py-2 bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors"
-        >
-          Previous Month
-        </button>
-        <button
-          onClick={() => {
-            const nextMonthIndex = currentMonthIndex + 1;
-            if (nextMonthIndex < monthlyData.length) {
-              onImageClick?.(monthlyData[nextMonthIndex].startIndex);
-            }
-          }}
-          disabled={currentMonthIndex >= monthlyData.length - 1}
-          className="px-4 py-2 bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors"
-        >
-          Next Month
-        </button>
+      <div className="fixed bottom-0 left-0 right-0 z-10 p-4 bg-gradient-to-t from-black/50 to-transparent">
+        <div className="flex items-center justify-center gap-4 max-w-2xl mx-auto">
+          <button
+            onClick={() => {
+              const prevMonthIndex = currentMonthIndex - 1;
+              if (prevMonthIndex >= 0) {
+                onImageClick?.(monthlyData[prevMonthIndex].startIndex);
+              }
+            }}
+            disabled={currentMonthIndex <= 0}
+            className={`p-2 ${buttonClass} disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors`}
+          >
+            ←
+          </button>
+
+          <button
+            onClick={() => setIsAutoHighlighting(!isAutoHighlighting)}
+            className={`px-4 py-2 ${buttonClass} rounded-lg text-white transition-colors`}
+          >
+            {isAutoHighlighting ? "Pause Highlights" : "Resume Highlights"}
+          </button>
+
+          <button
+            onClick={() => {
+              const nextMonthIndex = currentMonthIndex + 1;
+              if (nextMonthIndex < monthlyData.length) {
+                onImageClick?.(monthlyData[nextMonthIndex].startIndex);
+              }
+            }}
+            disabled={currentMonthIndex >= monthlyData.length - 1}
+            className={`p-2 ${buttonClass} disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors`}
+          >
+            →
+          </button>
+        </div>
       </div>
     );
   };
 
-  // Check if we're in the review stage
-  const isReviewStage = currentMonth?.key === "year-review";
+  // Check if we're in the gallery stage
+  const isGalleryStage = currentMonth?.key === "gallery";
 
   // Add loading indicator for final collage
   const renderLoadingIndicator = () => {
@@ -329,7 +353,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
   };
 
   // Render final collage
-  if (isReviewStage) {
+  if (isGalleryStage) {
     const isSpace = theme === "space";
     const bgClass = isSpace
       ? "bg-black/50 border-blue-500/30"

@@ -10,7 +10,7 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
   console.log("SpaceIntro Component Mounted");
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [showText, setShowText] = useState(false);
+  const [showText, setShowText] = useState(true);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
 
   const introTexts = [
@@ -125,57 +125,49 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
 
     const timer = setTimeout(() => {
       if (currentTextIndex >= introTexts.length - 1) {
-        onComplete();
+        setShowText(false);
+        setTimeout(onComplete, 2000);
       } else {
         setCurrentTextIndex((prev) => prev + 1);
       }
     }, 6000);
 
     return () => clearTimeout(timer);
-  }, [showText, currentTextIndex, introTexts.length, onComplete]);
+  }, [currentTextIndex, showText]);
 
   return (
     <div className="fixed inset-0 bg-black">
       <div ref={containerRef} className="absolute inset-0" />
       <AnimatePresence mode="wait">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: showText ? 1 : 0 }}
-          transition={{ duration: 1 }}
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        >
+        {showText && (
           <motion.div
             key={currentTextIndex}
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{
-              duration: 1,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-            className="text-center px-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 1 }}
+            className="text-center px-4 max-w-4xl mx-auto"
           >
-            <motion.p
-              className="text-3xl md:text-4xl text-white font-bold max-w-3xl mx-auto"
-              style={{
-                textShadow: "0 0 20px rgba(255, 255, 255, 0.5)",
-              }}
-            >
-              {introTexts[currentTextIndex]}
-            </motion.p>
+            <div className="bg-black/50 backdrop-blur-sm rounded-lg py-8 px-6 border border-blue-500/30">
+              <p className="text-3xl md:text-4xl text-white font-bold">
+                {introTexts[currentTextIndex]}
+              </p>
+            </div>
           </motion.div>
-        </motion.div>
+        )}
       </AnimatePresence>
 
-      {/* Skip button - always visible */}
+      {/* Skip button */}
       <motion.button
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        onClick={onComplete}
-        className="fixed bottom-8 right-8 px-6 py-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-medium transition-colors pointer-events-auto"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="fixed bottom-8 right-8 px-6 py-3 bg-blue-600/70 hover:bg-blue-700/70 text-white rounded-lg shadow-lg backdrop-blur-sm border border-blue-500/30 transition-all hover:scale-105"
+        onClick={() => {
+          setShowText(false);
+          onComplete();
+        }}
       >
-        Skip Intro →
+        Skip Intro
       </motion.button>
     </div>
   );
