@@ -2,11 +2,6 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 
-const DevImage = dynamic(
-  () => import("./DevImage").then((mod) => mod.default),
-  { ssr: false }
-);
-
 interface LazyImageProps {
   src: string;
   alt: string;
@@ -32,23 +27,6 @@ const LazyImage: React.FC<LazyImageProps> = ({
   quality = 75,
   onLoad,
 }) => {
-  if (process.env.NODE_ENV === "development") {
-    return (
-      <DevImage
-        src={src}
-        alt={alt}
-        className={className}
-        fill={fill}
-        width={width}
-        height={height}
-        sizes={sizes}
-        priority={priority}
-        quality={quality}
-        onLoad={onLoad}
-      />
-    );
-  }
-
   return (
     <Image
       src={src}
