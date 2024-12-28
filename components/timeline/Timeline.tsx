@@ -1,7 +1,7 @@
 import { useTheme } from "../../contexts/ThemeContext";
 import type { ImageProps } from "../../utils/types/types";
 import ThemeSelector from "../themes/ThemeSelector";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 
 interface TimelineProps {
@@ -13,16 +13,37 @@ interface ThemeComponentProps {
 }
 
 const Timeline: React.FC<TimelineProps> = ({ images }) => {
+  console.log("Timeline Component Mounted", { imagesCount: images?.length });
+
   const { theme, setTheme } = useTheme();
   const [hasSelectedTheme, setHasSelectedTheme] = useState(false);
 
   // Dynamically import themes to reduce initial bundle size
   const SpaceTimeline = dynamic<ThemeComponentProps>(
-    () => import("./SpaceTimeline")
+    () => import("./SpaceTimeline"),
+    {
+      loading: () => {
+        console.log("Loading SpaceTimeline component...");
+        return <div>Loading...</div>;
+      },
+    }
   );
   const JapaneseTimeline = dynamic<ThemeComponentProps>(
-    () => import("./JapaneseTimeline")
+    () => import("./JapaneseTimeline"),
+    {
+      loading: () => {
+        console.log("Loading JapaneseTimeline component...");
+        return <div>Loading...</div>;
+      },
+    }
   );
+
+  useEffect(() => {
+    console.log("Timeline Effect Running", {
+      hasSelectedTheme,
+      currentTheme: theme,
+    });
+  }, [hasSelectedTheme, theme]);
 
   if (!hasSelectedTheme) {
     return (

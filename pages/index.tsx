@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../contexts/ThemeContext";
 import WelcomeScreen from "../components/ui/WelcomeScreen";
 import SpaceTimeline from "../components/timeline/SpaceTimeline";
@@ -50,6 +50,20 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 };
 
 export default function Home({ images }: HomeProps) {
+  console.log("Home Page Mounted");
+
+  useEffect(() => {
+    try {
+      console.log("Home Page Effect Running");
+      console.log("Environment Check:", {
+        gateway: process.env.NEXT_PUBLIC_PINATA_GATEWAY,
+        nodeEnv: process.env.NODE_ENV,
+      });
+    } catch (error) {
+      console.error("Error in Home page mount:", error);
+    }
+  }, []);
+
   const { theme } = useTheme();
   const [hasSelectedTheme, setHasSelectedTheme] = useState(false);
 

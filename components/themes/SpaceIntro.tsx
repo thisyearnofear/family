@@ -7,6 +7,8 @@ interface SpaceIntroProps {
 }
 
 const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
+  console.log("SpaceIntro Component Mounted");
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [showText, setShowText] = useState(false);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
@@ -19,7 +21,17 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
   ];
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    console.log("SpaceIntro Effect Running", {
+      showText,
+      currentTextIndex,
+    });
+
+    if (!containerRef.current) {
+      console.log("Container ref not ready");
+      return;
+    }
+
+    console.log("Initializing Three.js scene");
 
     // Store ref value in variable for cleanup
     const currentRef = containerRef.current;

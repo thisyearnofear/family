@@ -50,6 +50,14 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
   loadingStates = {},
   setLoadingStates = () => {},
 }) => {
+  console.log("MonthlyView Component Mounted");
+  console.log("Initial Props:", {
+    imagesCount: images?.length,
+    currentIndex,
+    theme,
+    loadingStatesKeys: Object.keys(loadingStates),
+  });
+
   const router = useRouter();
   const [showCreateGift, setShowCreateGift] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageProps | null>(null);
@@ -62,6 +70,71 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
   const [volume, setVolume] = useState(0.5);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [hasCompletedFirstView, setHasCompletedFirstView] = useState(false);
+
+  // Add error boundary
+  useEffect(() => {
+    try {
+      console.log("Initial Mount Effect Running");
+
+      // Log environment variables immediately
+      console.log("Early Environment Check:", {
+        gateway: process.env.NEXT_PUBLIC_PINATA_GATEWAY,
+        groupId: process.env.NEXT_PUBLIC_PINATA_GROUP_ID,
+        nodeEnv: process.env.NODE_ENV,
+      });
+
+      // Test image URL construction
+      if (images?.[0]?.ipfsHash) {
+        const gateway =
+          process.env.NEXT_PUBLIC_PINATA_GATEWAY?.replace(/\/$/, "") ||
+          "https://gateway.pinata.cloud/ipfs";
+        const testUrl = `${gateway}/${images[0].ipfsHash}`;
+        console.log("Test Image URL:", testUrl);
+      }
+    } catch (error) {
+      console.error("Error in initial mount:", error);
+    }
+  }, [images]);
+
+  // Add image cache with error handling
+  const imageCache = useMemo(() => {
+    console.log("Creating Image Cache");
+    try {
+      const cache = new Map<string, HTMLImageElement>();
+
+      const preloadImage = (image: ImageProps) => {
+        try {
+          if (cache.has(image.ipfsHash)) return;
+
+          const img = new Image();
+          const gateway =
+            process.env.NEXT_PUBLIC_PINATA_GATEWAY?.replace(/\/$/, "") ||
+            "https://gateway.pinata.cloud/ipfs";
+          const imageUrl = image.ipfsHash.startsWith("http")
+            ? image.ipfsHash
+            : `${gateway}/${image.ipfsHash}`;
+
+          img.src = imageUrl;
+          cache.set(image.ipfsHash, img);
+        } catch (error) {
+          console.error("Error in preloadImage:", error);
+        }
+      };
+
+      return {
+        get: (hash: string) => cache.get(hash),
+        preload: preloadImage,
+        has: (hash: string) => cache.has(hash),
+      };
+    } catch (error) {
+      console.error("Error creating imageCache:", error);
+      return {
+        get: () => null,
+        preload: () => {},
+        has: () => false,
+      };
+    }
+  }, []);
 
   // Group images by month
   const monthlyData = useMemo(() => {
@@ -116,32 +189,6 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
 
   const currentMonth = monthlyData[currentMonthIndex];
   const nextMonth = monthlyData[currentMonthIndex + 1];
-
-  // Add image cache
-  const imageCache = useMemo(() => {
-    const cache = new Map<string, HTMLImageElement>();
-
-    const preloadImage = (image: ImageProps) => {
-      if (cache.has(image.ipfsHash)) return;
-
-      const img = new Image();
-      const gateway =
-        process.env.NEXT_PUBLIC_PINATA_GATEWAY?.replace(/\/$/, "") ||
-        "https://gateway.pinata.cloud/ipfs";
-      const imageUrl = image.ipfsHash.startsWith("http")
-        ? image.ipfsHash
-        : `${gateway}/${image.ipfsHash}`;
-
-      img.src = imageUrl;
-      cache.set(image.ipfsHash, img);
-    };
-
-    return {
-      get: (hash: string) => cache.get(hash),
-      preload: preloadImage,
-      has: (hash: string) => cache.has(hash),
-    };
-  }, []);
 
   // Handle image load completion
   const handleImageLoad = useCallback(

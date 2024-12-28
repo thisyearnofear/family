@@ -32,7 +32,11 @@ const SONGS = [
   { path: "/sounds/baba.mp3", title: "Baba, I Understand" },
 ];
 
-const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
+const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images }) => {
+  console.log("SpaceTimeline Component Mounted", {
+    imagesCount: images?.length,
+  });
+
   const containerRef = useRef<HTMLDivElement>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const [showIntro, setShowIntro] = useState(true);
@@ -43,6 +47,14 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({ images = [] }) => {
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [loadingStates, setLoadingStates] = useState<LoadingState>({});
   const targetCameraZRef = useRef(5);
+
+  useEffect(() => {
+    console.log("SpaceTimeline Effect Running", {
+      showIntro,
+      currentIndex,
+      loadingStatesCount: Object.keys(loadingStates).length,
+    });
+  }, [showIntro, currentIndex, loadingStates]);
 
   // Group images by month for loading state tracking
   const monthlyData = useMemo(() => {

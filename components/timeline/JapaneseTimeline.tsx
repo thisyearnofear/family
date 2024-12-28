@@ -42,7 +42,11 @@ const SONGS = [
   { path: "/sounds/baba.mp3", title: "Baba, I Understand" },
 ];
 
-const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
+const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images }) => {
+  console.log("JapaneseTimeline Component Mounted", {
+    imagesCount: images?.length,
+  });
+
   const [showIntro, setShowIntro] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -50,6 +54,13 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({ images = [] }) => {
   const [hasCompletedFirstView, setHasCompletedFirstView] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [loadingStates, setLoadingStates] = useState<LoadingState>({});
+
+  useEffect(() => {
+    console.log("JapaneseTimeline Effect Running", {
+      currentIndex,
+      loadingStatesCount: Object.keys(loadingStates).length,
+    });
+  }, [currentIndex, loadingStates]);
 
   // Group images by month for loading state tracking
   const monthlyData = useMemo(() => {
