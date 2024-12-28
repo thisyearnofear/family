@@ -184,7 +184,19 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     if (!currentMonth) return;
 
     // Debug logging for environment variables
-    console.log("PINATA_GATEWAY:", process.env.NEXT_PUBLIC_PINATA_GATEWAY);
+    console.log("Environment Variables Debug:");
+    console.log(
+      "NEXT_PUBLIC_PINATA_GATEWAY:",
+      process.env.NEXT_PUBLIC_PINATA_GATEWAY
+    );
+    console.log(
+      "NEXT_PUBLIC_PINATA_GROUP_ID:",
+      process.env.NEXT_PUBLIC_PINATA_GROUP_ID
+    );
+
+    // Test if we're in production
+    console.log("NODE_ENV:", process.env.NODE_ENV);
+    console.log("NEXT_PUBLIC_ENV:", process.env.NEXT_PUBLIC_ENV);
 
     // Find the next two months to preload
     const currentMonthIndex = monthlyData.findIndex(
@@ -197,6 +209,9 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
 
     nextTwoMonths.forEach((month) => {
       console.log(`Preloading month: ${month.month}`);
+      if (month.images && month.images.length > 0) {
+        console.log("Sample image hash:", month.images[0].ipfsHash);
+      }
 
       // Initialize loading state for month if not exists
       setLoadingStates((prev) => ({
@@ -228,8 +243,11 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
           ? image.ipfsHash
           : `${gateway}/${image.ipfsHash}`;
 
-        // Debug logging for image URLs
-        console.log("Loading image:", imageUrl);
+        // Debug logging for image URLs and construction
+        console.log("Image URL Construction:");
+        console.log("- Gateway:", gateway);
+        console.log("- IPFS Hash:", image.ipfsHash);
+        console.log("- Final URL:", imageUrl);
 
         img.onload = () => {
           console.log("Successfully loaded:", imageUrl);
@@ -242,7 +260,12 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
         };
 
         img.onerror = (error) => {
-          console.error(`Failed to preload image: ${imageUrl}`, error);
+          console.error("Failed to load image:", {
+            url: imageUrl,
+            error: error,
+            gateway: gateway,
+            hash: image.ipfsHash,
+          });
           handleImageLoad(
             month.key,
             month.images.indexOf(image),
