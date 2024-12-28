@@ -107,32 +107,19 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
 
     // Start text sequence
     setShowText(true);
-    const textInterval = setInterval(() => {
-      setCurrentTextIndex((prev) => {
-        if (prev >= introTexts.length - 1) {
-          clearInterval(textInterval);
-          setTimeout(() => {
-            cancelAnimationFrame(frame);
-            onComplete();
-          }, 2000);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 3000);
 
     // Cleanup
     return () => {
       if (currentRef?.contains(renderer.domElement)) {
         currentRef.removeChild(renderer.domElement);
       }
-      clearInterval(textInterval);
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", handleResize);
       renderer.dispose();
     };
-  }, [onComplete, introTexts.length]);
+  }, []); // Empty dependency array since this is the initial setup
 
+  // Separate effect for text transitions
   useEffect(() => {
     if (!showText) return;
 

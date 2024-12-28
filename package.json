@@ -29,7 +29,8 @@
     "react-icons": "^5.0.1",
     "react-swipeable": "^7.0.1",
     "three": "^0.161.0",
-    "use-sound": "^4.0.1"
+    "use-sound": "^4.0.1",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -37,6 +38,7 @@
     "@types/react-dom": "^18",
     "@types/three": "^0.161.2",
     "@types/p5": "^1.7.6",
+    "@types/uuid": "^9.0.8",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.1.0",
