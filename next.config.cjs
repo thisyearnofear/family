@@ -13,19 +13,7 @@ const nextConfig = {
     "react-use-keypress",
   ],
   images: {
-    unoptimized: true,
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "gateway.pinata.cloud",
-        pathname: "/ipfs/**",
-      },
-      {
-        protocol: "https",
-        hostname: "**.pinata.cloud",
-        pathname: "/ipfs/**",
-      },
-    ],
+    domains: ["gateway.pinata.cloud"],
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
   },

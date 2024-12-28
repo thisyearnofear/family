@@ -17,9 +17,7 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
   priority = false,
   onLoad,
 }) => {
-  const gateway =
-    process.env.NEXT_PUBLIC_PINATA_GATEWAY?.replace(/\/$/, "") ||
-    "https://gateway.pinata.cloud/ipfs";
+  const gateway = "https://gateway.pinata.cloud/ipfs";
   const imageUrl = image.ipfsHash.startsWith("http")
     ? image.ipfsHash
     : `${gateway}/${image.ipfsHash}`;
