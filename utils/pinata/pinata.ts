@@ -45,6 +45,22 @@ export async function pinFileToIPFS(file: File): Promise<{ IpfsHash: string }> {
   return response.data;
 }
 
+interface PinataFile {
+  id: string;
+  name: string;
+  cid: string;
+  size: number;
+  number_of_files: number;
+  mime_type: string;
+  group_id: string | null;
+  created_at: string;
+}
+
+interface PinataListResponse {
+  files: PinataFile[];
+  next_page_token?: string;
+}
+
 export const getImages = async (groupId: string): Promise<ImageProps[]> => {
   try {
     console.log("getImages: Starting with groupId:", groupId);
@@ -54,105 +70,104 @@ export const getImages = async (groupId: string): Promise<ImageProps[]> => {
       throw new Error("PINATA_JWT is not configured");
     }
 
-    // First, try to fetch the group JSON directly
-    const groupResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_PINATA_GATEWAY}${groupId}`,
+    // Use the SDK's listFiles method with group filter
+    // Since 'files' property doesn't exist, let's use the pinList API directly
+    const response = await fetch(
+      `https://api.pinata.cloud/data/pinList?groupId=${groupId}`,
       {
-        method: "GET",
-      }
-    );
-
-    if (groupResponse.ok) {
-      console.log("getImages: Successfully fetched group JSON");
-      const groupData = await groupResponse.json();
-      console.log("getImages: Group data:", {
-        hasImages: !!groupData.images,
-        imageCount: groupData.images?.length,
-      });
-
-      if (groupData.images && Array.isArray(groupData.images)) {
-        return groupData.images.map((image: any, index: number) => ({
-          id: index,
-          ipfsHash: image.ipfsHash,
-          name: image.name || `Image ${index + 1}`,
-          description: image.description || null,
-          dateTaken:
-            image.dateTaken || image.dateModified || new Date().toISOString(),
-          dateModified: image.dateModified || null,
-          width: image.width || 1280,
-          height: image.height || 720,
-        }));
-      }
-    }
-
-    // If group JSON fetch fails, try the pin list API
-    console.log("getImages: Falling back to pin list API");
-    const pinListResponse = await fetch(
-      `https://api.pinata.cloud/data/pinList?status=pinned&metadata[keyvalues][groupId][value]=${groupId}&metadata[keyvalues][groupId][op]=eq`,
-      {
-        method: "GET",
         headers: {
           Authorization: `Bearer ${process.env.PINATA_JWT}`,
         },
       }
     );
 
-    if (!pinListResponse.ok) {
-      console.error("getImages: Pinata API error:", {
-        status: pinListResponse.status,
-        statusText: pinListResponse.statusText,
-      });
-      const errorText = await pinListResponse.text();
-      console.error("getImages: Error response:", errorText);
-      throw new Error(
-        `Pinata API error: ${pinListResponse.status} ${pinListResponse.statusText}`
-      );
+    if (!response.ok) {
+      throw new Error(`Pinata API error: ${response.status}`);
     }
 
-    const data = await pinListResponse.json();
-    console.log("getImages: Received pin list response:", {
-      hasRows: !!data.rows,
-      rowCount: data.rows?.length,
-      count: data.count,
-      firstRow: data.rows?.[0]
-        ? {
-            hash: data.rows[0].ipfs_pin_hash,
-            hasMetadata: !!data.rows[0].metadata,
-            hasKeyValues: !!data.rows[0].metadata?.keyvalues,
-          }
-        : null,
-    });
+    const data = (await response.json()) as PinataListResponse;
+    console.log("getImages: Retrieved files count:", data.files.length);
 
-    if (!data.rows) {
-      console.error("getImages: No rows in response");
-      return [];
-    }
-
-    const images = data.rows.map((row: any, index: number) => ({
+    // Map the files to our ImageProps format
+    const images = data.files.map((file: PinataFile, index: number) => ({
       id: index,
-      ipfsHash: row.ipfs_pin_hash,
-      name: row.metadata?.name || `Image ${row.ipfs_pin_hash.slice(0, 8)}`,
-      description: row.metadata?.keyvalues?.description || null,
-      dateTaken:
-        row.metadata?.keyvalues?.dateTaken ||
-        row.date_pinned ||
-        new Date().toISOString(),
-      dateModified: row.date_pinned || null,
-      width: row.metadata?.keyvalues?.width || 1280,
-      height: row.metadata?.keyvalues?.height || 720,
+      ipfsHash: file.cid,
+      name: file.name || `Image ${index + 1}`,
+      description: null,
+      dateTaken: file.created_at,
+      dateModified: file.created_at,
+      width: 1280, // Default width
+      height: 720, // Default height
     }));
 
-    console.log("getImages: Processed images count:", images.length);
-    return images;
+    // Sort images by date
+    const sortedImages = images.sort((a: ImageProps, b: ImageProps) => {
+      if (!a.dateTaken || !b.dateTaken) return 0;
+      return new Date(a.dateTaken).getTime() - new Date(b.dateTaken).getTime();
+    });
+
+    console.log(
+      "getImages: Processed and sorted images count:",
+      sortedImages.length
+    );
+    return sortedImages;
   } catch (error) {
     console.error("getImages: Error fetching images:", error);
-    if (error instanceof Error) {
-      console.error("getImages: Error details:", {
-        message: error.message,
-        stack: error.stack,
+
+    // Fallback to direct group JSON fetch if API method fails
+    try {
+      console.log("getImages: Attempting fallback to dedicated gateway");
+      const gatewayUrl = process.env.NEXT_PUBLIC_PINATA_GATEWAY?.replace(
+        /\/$/,
+        ""
+      );
+
+      if (!gatewayUrl) {
+        throw new Error("Pinata gateway not configured");
+      }
+
+      const groupResponse = await fetch(`${gatewayUrl}/${groupId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${process.env.PINATA_JWT}`,
+        },
       });
+
+      if (!groupResponse.ok) {
+        throw new Error(`Gateway fetch failed: ${groupResponse.status}`);
+      }
+
+      const groupData = await groupResponse.json();
+
+      if (!groupData.images || !Array.isArray(groupData.images)) {
+        throw new Error("Invalid group data format");
+      }
+
+      interface GroupImage {
+        ipfsHash: string;
+        name?: string;
+        description?: string;
+        dateTaken?: string;
+        dateModified?: string;
+        width?: number;
+        height?: number;
+      }
+
+      return groupData.images.map((image: GroupImage, index: number) => ({
+        id: index,
+        ipfsHash: image.ipfsHash,
+        name: image.name || `Image ${index + 1}`,
+        description: image.description || null,
+        dateTaken:
+          image.dateTaken || image.dateModified || new Date().toISOString(),
+        dateModified: image.dateModified || null,
+        width: image.width || 1280,
+        height: image.height || 720,
+      }));
+    } catch (fallbackError) {
+      console.error("getImages: Fallback also failed:", fallbackError);
+      throw fallbackError;
     }
-    throw error;
   }
 };
 

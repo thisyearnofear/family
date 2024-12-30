@@ -8,10 +8,8 @@ import {
   PencilSquareIcon,
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
-import { uploadPhotos } from "../../utils/pinata/uploadPhotos";
-import { createGift } from "../../utils/gifts";
-import type { ImageProps } from "../../utils/types/types";
-import type { Gift } from "../../utils/gifts";
+import { uploadPhotos, createGift } from "@utils/api";
+import type { ImageProps, UploadResult } from "@utils/types";
 
 interface CreateGiftFlowProps {
   onClose: () => void;
@@ -20,7 +18,6 @@ interface CreateGiftFlowProps {
     messages: string[];
     photos: ImageProps[];
     giftId: string;
-    password?: string;
   }) => void;
 }
 
@@ -39,7 +36,6 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
   const [photos, setPhotos] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [password, setPassword] = useState("");
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setPhotos((prev) => [...prev, ...acceptedFiles]);
@@ -74,7 +70,18 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
 
       for (let i = 0; i < photos.length; i++) {
         const results = await uploadPhotos([photos[i]], tempId);
-        uploadedPhotos.push(...results);
+        const transformedResults = results.map((result: UploadResult) => ({
+          id: result.id,
+          ipfsHash: result.ipfsHash,
+          name: result.name,
+          width: result.width,
+          height: result.height,
+          dateTaken: result.dateTaken,
+          dateModified: result.dateModified,
+          description: result.description,
+          groupId: result.groupId,
+        }));
+        uploadedPhotos.push(...transformedResults);
         setUploadProgress(((i + 1) / totalPhotos) * 100);
       }
 
@@ -83,8 +90,7 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
         theme,
         messages,
         photos: uploadedPhotos,
-        password: password || undefined,
-        groupId: uploadedPhotos[0].groupId, // All photos will be in the same group
+        groupId: uploadedPhotos[0].groupId,
       });
 
       onComplete({
@@ -92,7 +98,6 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
         messages,
         photos: uploadedPhotos,
         giftId: gift.id,
-        password: password || undefined,
       });
     } catch (error) {
       console.error("Error creating gift:", error);
@@ -247,22 +252,6 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
                   </div>
                 </div>
               )}
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Password Protection (Optional)
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter a password to protect your gift..."
-                />
-                <p className="text-sm text-gray-500">
-                  Leave blank for public access
-                </p>
-              </div>
 
               {isUploading && (
                 <div className="space-y-2">

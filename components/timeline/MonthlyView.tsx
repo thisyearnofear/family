@@ -291,71 +291,37 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
     );
   }, [monthlyData, currentIndex, currentMonth]);
 
-  // Adjust navigation logic to allow transition to gallery
-  const handleNextMonth = useCallback(() => {
-    const nextMonthIndex = currentMonthIndex + 1;
+  // Navigation handlers
+  const handlePreviousMonth = useCallback(() => {
+    const prevMonthIndex = currentMonthIndex - 1;
+    if (prevMonthIndex >= 0) {
+      onImageClick?.(monthlyData[prevMonthIndex].startIndex);
+    }
+  }, [currentMonthIndex, monthlyData, onImageClick]);
 
+  const handleNextMonth = useCallback(() => {
     // If we're at the last regular month (December), transition to gallery
     if (currentMonth?.month.includes("December")) {
-      const galleryMonth = monthlyData[monthlyData.length - 1]; // Get the gallery month
+      const galleryMonth = monthlyData[monthlyData.length - 1];
       onImageClick?.(galleryMonth.startIndex);
       return;
     }
 
     // Normal month navigation
+    const nextMonthIndex = currentMonthIndex + 1;
     if (nextMonthIndex < monthlyData.length) {
       onImageClick?.(monthlyData[nextMonthIndex].startIndex);
     }
   }, [currentMonthIndex, monthlyData, onImageClick, currentMonth]);
 
-  // Render timeline controls with highlight toggle
-  const renderTimelineControls = () => {
-    if (!currentMonth) return null;
+  // Handle track changes
+  const handleNextTrack = useCallback(() => {
+    setCurrentSongIndex((prev) => (prev + 1) % SONGS.length);
+  }, []);
 
-    const isSpace = theme === "space";
-    const buttonClass = isSpace
-      ? "bg-blue-600/70 hover:bg-blue-700/70"
-      : "bg-red-600/70 hover:bg-red-700/70";
-
-    return (
-      <div className="fixed bottom-0 left-0 right-0 z-10 p-4 bg-gradient-to-t from-black/50 to-transparent">
-        <div className="flex items-center justify-center gap-4 max-w-2xl mx-auto">
-          <button
-            onClick={() => {
-              const prevMonthIndex = currentMonthIndex - 1;
-              if (prevMonthIndex >= 0) {
-                onImageClick?.(monthlyData[prevMonthIndex].startIndex);
-              }
-            }}
-            disabled={currentMonthIndex <= 0}
-            className={`p-2 ${buttonClass} disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors`}
-          >
-            ←
-          </button>
-
-          <button
-            onClick={() => setIsAutoHighlighting(!isAutoHighlighting)}
-            className={`px-4 py-2 ${buttonClass} rounded-lg text-white transition-colors`}
-          >
-            {isAutoHighlighting ? "Pause Highlights" : "Resume Highlights"}
-          </button>
-
-          <button
-            onClick={() => {
-              const nextMonthIndex = currentMonthIndex + 1;
-              if (nextMonthIndex < monthlyData.length) {
-                onImageClick?.(monthlyData[nextMonthIndex].startIndex);
-              }
-            }}
-            disabled={currentMonthIndex >= monthlyData.length - 1}
-            className={`p-2 ${buttonClass} disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors`}
-          >
-            →
-          </button>
-        </div>
-      </div>
-    );
-  };
+  const handlePreviousTrack = useCallback(() => {
+    setCurrentSongIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
+  }, []);
 
   // Check if we're in the gallery stage
   const isGalleryStage = shouldShowGallery;
@@ -633,9 +599,6 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
           ))}
         </div>
       </motion.div>
-
-      {/* Timeline Controls */}
-      {renderTimelineControls()}
 
       {/* Highlighted Image Overlay */}
       <AnimatePresence>

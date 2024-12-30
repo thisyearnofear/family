@@ -1,16 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import * as THREE from "three";
+import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import * as THREE from "three";
 
 interface SpaceIntroProps {
   onComplete: () => void;
 }
 
 const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
-  console.log("SpaceIntro Component Mounted");
-
   const containerRef = useRef<HTMLDivElement>(null);
-  const [showText, setShowText] = useState(true);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
 
   const introTexts = [
@@ -21,22 +18,25 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
   ];
 
   useEffect(() => {
-    console.log("SpaceIntro Effect Running", {
-      showText,
-      currentTextIndex,
-    });
+    const interval = setInterval(() => {
+      setCurrentTextIndex((prev) => {
+        if (prev >= introTexts.length - 1) {
+          clearInterval(interval);
+          setTimeout(onComplete, 6000);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 6000);
 
-    if (!containerRef.current) {
-      console.log("Container ref not ready");
-      return;
-    }
+    return () => clearInterval(interval);
+  }, [introTexts.length, onComplete]);
 
-    console.log("Initializing Three.js scene");
+  // ThreeJS setup and animation
+  useEffect(() => {
+    if (!containerRef.current) return;
 
-    // Store ref value in variable for cleanup
-    const currentRef = containerRef.current;
-
-    // Scene setup
+    const container = containerRef.current;
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -44,41 +44,43 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
       0.1,
       1000
     );
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    currentRef.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
 
-    // Handle resize
-    const handleResize = () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+    // Stars setup with different layers for parallax effect
+    const createStarLayer = (count: number, size: number, depth: number) => {
+      const geometry = new THREE.BufferGeometry();
+      const material = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size,
+        transparent: true,
+        opacity: Math.min(1, depth * 0.5),
+      });
+
+      const vertices = [];
+      for (let i = 0; i < count; i++) {
+        vertices.push(
+          (Math.random() - 0.5) * 2000,
+          (Math.random() - 0.5) * 2000,
+          -Math.random() * depth
+        );
+      }
+
+      geometry.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(vertices, 3)
+      );
+      return new THREE.Points(geometry, material);
     };
 
-    window.addEventListener("resize", handleResize);
+    const starLayers = [
+      createStarLayer(5000, 0.15, 1000),
+      createStarLayer(5000, 0.1, 1500),
+      createStarLayer(5000, 0.05, 2000),
+    ];
 
-    // Stars
-    const starGeometry = new THREE.BufferGeometry();
-    const starMaterial = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 0.1,
-      transparent: true,
-    });
-
-    const starVertices = [];
-    for (let i = 0; i < 15000; i++) {
-      const x = (Math.random() - 0.5) * 2000;
-      const y = (Math.random() - 0.5) * 2000;
-      const z = -Math.random() * 2000;
-      starVertices.push(x, y, z);
-    }
-
-    starGeometry.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(starVertices, 3)
-    );
-    const stars = new THREE.Points(starGeometry, starMaterial);
-    scene.add(stars);
+    starLayers.forEach((layer) => scene.add(layer));
 
     // Camera position
     camera.position.z = 5;
@@ -88,73 +90,73 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
     const animate = () => {
       frame = requestAnimationFrame(animate);
 
-      // Rotate stars
-      stars.rotation.x += 0.0001;
-      stars.rotation.y += 0.0002;
+      // Rotate star layers at different speeds
+      starLayers.forEach((layer, index) => {
+        layer.rotation.x += 0.0001 * (index + 1);
+        layer.rotation.y += 0.0002 * (index + 1);
+      });
 
-      // Move camera forward
-      camera.position.z -= 0.1;
-
-      // Reset camera position when too close
-      if (camera.position.z < -200) {
-        camera.position.z = 5;
-      }
+      // Camera movement
+      camera.position.z = Math.max(-200, camera.position.z - 0.1);
 
       renderer.render(scene, camera);
     };
 
     animate();
 
-    // Start text sequence
-    setShowText(true);
+    // Handle resize
+    const handleResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener("resize", handleResize);
 
     // Cleanup
     return () => {
-      if (currentRef?.contains(renderer.domElement)) {
-        currentRef.removeChild(renderer.domElement);
+      if (container?.contains(renderer.domElement)) {
+        container.removeChild(renderer.domElement);
       }
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", handleResize);
       renderer.dispose();
     };
-  }, []); // Empty dependency array since this is the initial setup
-
-  // Separate effect for text transitions
-  useEffect(() => {
-    if (!showText) return;
-
-    const timer = setTimeout(() => {
-      if (currentTextIndex >= introTexts.length - 1) {
-        setShowText(false);
-        setTimeout(onComplete, 2000);
-      } else {
-        setCurrentTextIndex((prev) => prev + 1);
-      }
-    }, 6000);
-
-    return () => clearTimeout(timer);
-  }, [currentTextIndex, showText]);
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-black">
-      <div ref={containerRef} className="absolute inset-0" />
+      {/* Background layer */}
+      <div
+        ref={containerRef}
+        className="absolute inset-0"
+        style={{ zIndex: 0 }}
+      />
+
+      {/* Content layer */}
       <AnimatePresence mode="wait">
-        {showText && (
-          <motion.div
-            key={currentTextIndex}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 1 }}
-            className="fixed inset-0 flex items-center justify-center px-4 z-10"
-          >
-            <div className="bg-black/50 backdrop-blur-sm rounded-lg py-8 px-6 border border-blue-500/30">
-              <p className="text-3xl md:text-4xl text-white font-bold">
-                {introTexts[currentTextIndex]}
-              </p>
-            </div>
-          </motion.div>
-        )}
+        <motion.div
+          key={currentTextIndex}
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+          transition={{
+            duration: 1,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+          className="fixed inset-0 flex items-center justify-center px-4"
+          style={{ zIndex: 1 }}
+        >
+          <div className="text-center max-w-4xl mx-auto">
+            <motion.p
+              className="text-3xl md:text-4xl text-white font-space"
+              style={{
+                textShadow: "0 0 20px rgba(0, 0, 255, 0.5)",
+              }}
+            >
+              {introTexts[currentTextIndex]}
+            </motion.p>
+          </div>
+        </motion.div>
       </AnimatePresence>
 
       {/* Skip button - always visible */}
@@ -162,11 +164,9 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
-        className="fixed bottom-8 right-8 px-6 py-3 rounded-full bg-blue-600/70 hover:bg-blue-700/70 text-white backdrop-blur-sm border border-blue-500/30 transition-all hover:scale-105 z-20"
-        onClick={() => {
-          setShowText(false);
-          onComplete();
-        }}
+        onClick={onComplete}
+        className="fixed bottom-8 right-8 px-6 py-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-medium transition-colors"
+        style={{ zIndex: 2 }}
       >
         Skip Intro →
       </motion.button>

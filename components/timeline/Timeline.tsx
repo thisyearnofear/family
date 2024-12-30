@@ -1,5 +1,5 @@
 import { useTheme } from "../../contexts/ThemeContext";
-import type { ImageProps } from "../../utils/types/types";
+import type { ImageProps } from "../../utils/types";
 import ThemeSelector from "../themes/ThemeSelector";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";

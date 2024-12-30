@@ -4,7 +4,7 @@ import useSound from "use-sound";
 import * as THREE from "three";
 import MonthlyView from "./MonthlyView";
 import TimelineControls from "./TimelineControls";
-import type { ImageProps } from "../../utils/types/types";
+import type { ImageProps } from "@utils/types/types";
 
 interface SpaceTimelineProps {
   images: ImageProps[];

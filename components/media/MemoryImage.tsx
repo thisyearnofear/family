@@ -1,6 +1,8 @@
 import Image from "next/image";
-import { useState } from "react";
-import type { ImageProps } from "../../utils/types/types";
+import { useState, useEffect } from "react";
+import type { ImageProps } from "@utils/types";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 interface MemoryImageProps {
   image: ImageProps;
@@ -19,11 +21,70 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
 
   // Construct the full URL for the image
   const imageUrl = image.ipfsHash.startsWith("http")
     ? image.ipfsHash
     : `https://gateway.pinata.cloud/ipfs/${image.ipfsHash}`;
+
+  // Auto-retry logic
+  useEffect(() => {
+    if (isError && retryCount < MAX_RETRIES) {
+      const timer = setTimeout(() => {
+        setIsError(false);
+        setRetryCount((prev) => prev + 1);
+      }, 2000 * (retryCount + 1)); // Exponential backoff
+
+      return () => clearTimeout(timer);
+    }
+  }, [isError, retryCount]);
+
+  // Loading placeholder component
+  const LoadingPlaceholder = () => (
+    <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200 animate-pulse flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 animate-pulse" />
+        <p className="text-sm text-gray-500">Loading your memory...</p>
+      </div>
+    </div>
+  );
+
+  // Error placeholder component
+  const ErrorPlaceholder = () => (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="absolute inset-0 bg-gradient-to-r from-gray-50 to-gray-100 flex items-center justify-center"
+    >
+      <div className="text-center px-4">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="w-8 h-8 mx-auto mb-3 text-blue-500"
+        >
+          <ArrowPathIcon />
+        </motion.div>
+        <p className="text-sm text-gray-600 mb-2">
+          {retryCount < MAX_RETRIES
+            ? "Retrieving your memory..."
+            : "Taking longer than expected..."}
+        </p>
+        {retryCount >= MAX_RETRIES && (
+          <button
+            onClick={() => {
+              setIsError(false);
+              setRetryCount(0);
+            }}
+            className="text-xs text-blue-500 hover:text-blue-600 underline"
+          >
+            Try again
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
 
   // In production, use a regular img tag to bypass Next.js image optimization
   if (process.env.NODE_ENV === "production") {
@@ -37,25 +98,26 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
           } ${isInteractive ? "cursor-pointer" : ""}`}
           onLoad={() => {
             setIsLoading(false);
+            setIsError(false);
             onLoad?.();
           }}
           onError={() => {
-            console.error("Failed to load image:", imageUrl);
+            console.warn("Image load attempt failed:", imageUrl);
             setIsError(true);
             setIsLoading(false);
           }}
         />
-        {(isLoading || isError) && (
-          <div
-            className={`absolute inset-0 ${
-              isError ? "bg-red-100" : "bg-gray-100"
-            } animate-pulse flex items-center justify-center`}
-          >
-            {isError && (
-              <span className="text-red-500 text-sm">Failed to load image</span>
-            )}
-          </div>
-        )}
+        <AnimatePresence>
+          {(isLoading || isError) && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {isLoading ? <LoadingPlaceholder /> : <ErrorPlaceholder />}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -75,25 +137,26 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
         priority={priority}
         onLoadingComplete={() => {
           setIsLoading(false);
+          setIsError(false);
           onLoad?.();
         }}
         onError={() => {
-          console.error("Failed to load image:", imageUrl);
+          console.warn("Image load attempt failed:", imageUrl);
           setIsError(true);
           setIsLoading(false);
         }}
       />
-      {(isLoading || isError) && (
-        <div
-          className={`absolute inset-0 ${
-            isError ? "bg-red-100" : "bg-gray-100"
-          } animate-pulse flex items-center justify-center`}
-        >
-          {isError && (
-            <span className="text-red-500 text-sm">Failed to load image</span>
-          )}
-        </div>
-      )}
+      <AnimatePresence>
+        {(isLoading || isError) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {isLoading ? <LoadingPlaceholder /> : <ErrorPlaceholder />}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

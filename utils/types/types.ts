@@ -1,16 +1,20 @@
 /* eslint-disable no-unused-vars */
+
+// Core image type used throughout the application
 export interface ImageProps {
   id: number;
   ipfsHash: string;
+  name: string;
   width: number;
   height: number;
-  dateTaken: string; // ISO date string
-  dateModified?: string; // ISO date string (optional)
-  name: string;
+  dateTaken?: string;
+  dateModified?: string;
+  description?: string | null;
   blurDataUrl?: string;
-  description: string | null;
+  groupId?: string;
 }
 
+// Modal related types
 export interface SharedModalProps {
   index: number;
   images?: ImageProps[];
@@ -19,4 +23,29 @@ export interface SharedModalProps {
   closeModal: () => void;
   navigation: boolean;
   direction?: number;
+}
+
+// Gift related types
+export interface GiftData {
+  theme: "space" | "japanese";
+  messages: string[];
+  photos: ImageProps[];
+  password?: string;
+  groupId: string;
+}
+
+// Timeline related types
+export interface TimelineProps {
+  images: ImageProps[];
+  isAutoHighlighting?: boolean;
+  setIsAutoHighlighting?: (value: boolean) => void;
+}
+
+// Loading state types
+export interface LoadingState {
+  [key: string]: {
+    isLoading: boolean;
+    loadedCount: number;
+    totalCount: number;
+  };
 }

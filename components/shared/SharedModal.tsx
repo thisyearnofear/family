@@ -9,10 +9,9 @@ import {
   ArrowUturnLeftIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { variants } from "../../utils/animations/animationVariants";
-import downloadPhoto from "../../utils/helpers/downloadPhoto";
-import { range } from "../../utils/helpers/range";
-import type { ImageProps, SharedModalProps } from "../../utils/types/types";
+import { variants } from "@utils/animations";
+import { downloadPhoto, range } from "@utils/helpers";
+import type { ImageProps, SharedModalProps } from "@utils/types";
 
 // Helper function to get full IPFS URL
 const getIpfsUrl = (image: ImageProps) => {

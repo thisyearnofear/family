@@ -3,7 +3,7 @@ import useSound from "use-sound";
 import TimelineControls from "./TimelineControls";
 import MonthlyView from "./MonthlyView";
 import dynamic from "next/dynamic";
-import type { ImageProps } from "../../utils/types/types";
+import type { ImageProps } from "@utils/types/types";
 
 const JapaneseIntro = dynamic(() => import("../themes/JapaneseIntro"), {
   ssr: false,

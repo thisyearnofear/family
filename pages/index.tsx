@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { useTheme } from "../contexts/ThemeContext";
-import WelcomeScreen from "../components/ui/WelcomeScreen";
-import SpaceTimeline from "../components/timeline/SpaceTimeline";
-import JapaneseTimeline from "../components/timeline/JapaneseTimeline";
-import PageTransition from "../components/layout/PageTransition";
-import { useTimeline } from "../contexts/TimelineContext";
-import type { ImageProps } from "../utils/types/types";
-import { getImages } from "../utils/pinata/pinata";
+import { useTheme } from "@contexts/ThemeContext";
+import WelcomeScreen from "@components/ui/WelcomeScreen";
+import SpaceTimeline from "@components/timeline/SpaceTimeline";
+import JapaneseTimeline from "@components/timeline/JapaneseTimeline";
+import PageTransition from "@components/layout/PageTransition";
+import { useTimeline } from "@contexts/TimelineContext";
+import type { ImageProps } from "@utils/types";
+import { getImages } from "@utils/api/pinata";
 import type { GetServerSideProps } from "next";
 
 interface HomeProps {

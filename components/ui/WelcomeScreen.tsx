@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useTheme } from "../../contexts/ThemeContext";
+import { useTheme } from "@contexts/ThemeContext";
 import { useState } from "react";
 
 interface WelcomeScreenProps {
@@ -12,8 +12,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onCreateGift,
 }) => {
   const { setTheme } = useTheme();
-  const [groupId, setGroupId] = useState("");
-  const [password, setPassword] = useState("");
+  const [giftId, setGiftId] = useState("");
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50 to-teal-50 relative overflow-hidden">
@@ -35,7 +34,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             FamilyWrapped
           </h1>
           <p className="text-lg text-gray-600 mb-12 max-w-lg mx-auto font-['Outfit']">
-            Another year in the books <br /> Relive precious moments
+            Another year in the books <br /> Lets relive precious moments
           </p>
 
           <div className="flex flex-col md:flex-row gap-6 justify-center mb-12">
@@ -50,7 +49,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             >
               <span className="block text-2xl mb-1">🚀</span>
               <span className="block text-lg font-['Big_Shoulders_Display'] text-gray-800">
-                Space Journey
+                Space
               </span>
             </motion.button>
 
@@ -65,7 +64,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             >
               <span className="block text-2xl mb-1">🌳</span>
               <span className="block text-lg font-['Big_Shoulders_Display'] text-gray-800">
-                Zen Garden
+                Zen
               </span>
             </motion.button>
           </div>
@@ -74,29 +73,40 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             <h2 className="text-2xl font-['Big_Shoulders_Display'] text-gray-800 mb-4">
               Been Gifted?
             </h2>
-            <input
-              type="text"
-              value={groupId}
-              onChange={(e) => setGroupId(e.target.value)}
-              placeholder="ID"
-              className="w-full px-4 py-2 mb-3 bg-white/80 border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400"
-            />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full px-4 py-2 mb-4 bg-white/80 border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={giftId}
+                onChange={(e) => setGiftId(e.target.value)}
+                placeholder="Enter your gift ID"
+                className="w-full px-4 py-3 mb-4 bg-white/80 border border-gray-200 rounded-xl text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {giftId && (
+                <motion.button
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setGiftId("")}
+                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </motion.button>
+              )}
+            </div>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full px-4 py-2 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors duration-300"
+              disabled={!giftId.trim()}
+              className="w-full px-4 py-3 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => {
-                console.log("Unlocking gift with Group ID:", groupId);
+                if (giftId.trim()) {
+                  console.log("Unwrapping gift with ID:", giftId.trim());
+                  // Handle gift unwrapping here
+                }
               }}
             >
-              Unwrap
+              Unwrap Gift
             </motion.button>
           </div>
 
@@ -106,7 +116,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             className="text-gray-600 hover:text-gray-800 transition-colors duration-300"
             onClick={onCreateGift}
           >
-            Curate your own gift special people →
+            Curate your own gift →
           </motion.button>
         </div>
       </motion.div>

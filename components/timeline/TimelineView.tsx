@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useTimeline } from "../../contexts/TimelineContext";
 import { AnimatedContainer } from "../layout/AnimatedContainer";
@@ -11,10 +11,38 @@ interface TimelineViewProps {
   onComplete?: () => void;
 }
 
+const SONGS = [
+  { path: "/sounds/background-music.mp3", title: "Hopes and Dreams" },
+  { path: "/sounds/grow-old.mp3", title: "Grow Old Together" },
+  { path: "/sounds/mama.mp3", title: "Mamamayako" },
+  { path: "/sounds/baba.mp3", title: "Baba, I Understand" },
+];
+
 const TimelineView: React.FC<TimelineViewProps> = ({ onComplete }) => {
   const { state, dispatch } = useTimeline();
   const { currentIndex, isPlaying, volume, groupedImages, theme } = state;
   const [isAutoHighlighting, setIsAutoHighlighting] = useState(true);
+  const [currentSongIndex, setCurrentSongIndex] = useState(0);
+
+  // Compute all images first
+  const allImages = useMemo(
+    () => groupedImages.flatMap((group) => group.images),
+    [groupedImages]
+  );
+
+  // Compute current track and month information
+  const currentTrack = `"${SONGS[currentSongIndex].title}" by Papa`;
+
+  const { currentMonth, showNextMonth, showPreviousMonth } = useMemo(() => {
+    const monthIndex = groupedImages.findIndex((group) =>
+      group.images.some((img) => img === allImages[currentIndex])
+    );
+    return {
+      currentMonth: groupedImages[monthIndex]?.month || "",
+      showNextMonth: monthIndex < groupedImages.length - 1,
+      showPreviousMonth: monthIndex > 0,
+    };
+  }, [groupedImages, currentIndex, allImages]);
 
   // Sound setup
   const [play, { pause, sound }] = useSound("/sounds/background-music.mp3", {
@@ -37,7 +65,6 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onComplete }) => {
     }
   }, [volume, sound]);
 
-  const allImages = groupedImages.flatMap((group) => group.images);
   const currentImage = allImages[currentIndex];
   const currentMonthIndex = groupedImages.findIndex((group) =>
     group.images.some((img) => img === currentImage)
@@ -117,6 +144,32 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onComplete }) => {
     );
   };
 
+  const handleNextMonth = () => {
+    const nextIndex =
+      groupedImages.findIndex((group) =>
+        group.images.some((img) => img === allImages[currentIndex])
+      ) + 1;
+    if (nextIndex < groupedImages.length) {
+      dispatch({
+        type: "SET_INDEX",
+        payload: allImages.indexOf(groupedImages[nextIndex].images[0]),
+      });
+    }
+  };
+
+  const handlePreviousMonth = () => {
+    const prevIndex =
+      groupedImages.findIndex((group) =>
+        group.images.some((img) => img === allImages[currentIndex])
+      ) - 1;
+    if (prevIndex >= 0) {
+      dispatch({
+        type: "SET_INDEX",
+        payload: allImages.indexOf(groupedImages[prevIndex].images[0]),
+      });
+    }
+  };
+
   return (
     <div
       className={`fixed inset-0 ${
@@ -131,30 +184,24 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onComplete }) => {
         setIsPlaying={(playing) => dispatch({ type: "TOGGLE_PLAYING" })}
         volume={volume}
         setVolume={(vol) => dispatch({ type: "SET_VOLUME", payload: vol })}
-        currentTrack='"Hopes and Dreams" by Papa'
-        currentMonth={currentGroup?.month}
-        onNextMonth={() => {
-          const nextGroupIndex = currentMonthIndex + 1;
-          if (nextGroupIndex < groupedImages.length) {
-            dispatch({
-              type: "SET_INDEX",
-              payload: groupedImages[nextGroupIndex].images[0].id,
-            });
-          }
-        }}
-        onPreviousMonth={() => {
-          const prevGroupIndex = currentMonthIndex - 1;
-          if (prevGroupIndex >= 0) {
-            dispatch({
-              type: "SET_INDEX",
-              payload: groupedImages[prevGroupIndex].images[0].id,
-            });
-          }
-        }}
-        showNextMonth={currentMonthIndex < groupedImages.length - 1}
-        showPreviousMonth={currentMonthIndex > 0}
+        currentTrack={currentTrack}
+        currentMonth={currentMonth}
+        onNextMonth={handleNextMonth}
+        onPreviousMonth={handlePreviousMonth}
+        showNextMonth={showNextMonth}
+        showPreviousMonth={showPreviousMonth}
         isAutoHighlighting={isAutoHighlighting}
         setIsAutoHighlighting={setIsAutoHighlighting}
+        firstView={false}
+        nextMonthLoadingProgress={0}
+        onNextTrack={() =>
+          setCurrentSongIndex((prev) => (prev + 1) % SONGS.length)
+        }
+        onPreviousTrack={() =>
+          setCurrentSongIndex(
+            (prev) => (prev - 1 + SONGS.length) % SONGS.length
+          )
+        }
       />
     </div>
   );

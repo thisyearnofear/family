@@ -2,8 +2,8 @@ import { useState, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import useKeypress from "react-use-keypress";
-import type { ImageProps } from "../../utils/types/types";
-import { useLastViewedPhoto } from "../../utils/hooks/useLastViewedPhoto";
+import type { ImageProps } from "../../utils/types";
+import { useLastViewedPhoto } from "../../utils/hooks";
 import SharedModal from "../shared/SharedModal";
 
 export default function Carousel({
