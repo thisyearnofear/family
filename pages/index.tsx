@@ -7,7 +7,9 @@ import PageTransition from "@components/layout/PageTransition";
 import { useTimeline } from "@contexts/TimelineContext";
 import type { ImageProps } from "@utils/types";
 import { getImages } from "@utils/api/pinata";
+import { createGift } from "@utils/api/gifts";
 import type { GetServerSideProps } from "next";
+import CreateGiftFlow from "@components/ui/CreateGiftFlow";
 
 interface HomeProps {
   images: ImageProps[];
@@ -133,6 +135,9 @@ export default function Home({ images, error, debug }: HomeProps) {
   const { theme } = useTheme();
   const [hasSelectedTheme, setHasSelectedTheme] = useState(false);
   const [isAutoHighlighting, setIsAutoHighlighting] = useState(true);
+  const [showGiftFlow, setShowGiftFlow] = useState(false);
+  const [isCreatingGift, setIsCreatingGift] = useState(false);
+  const [giftError, setGiftError] = useState<string | null>(null);
 
   // Show error if there is one
   if (error) {
@@ -158,6 +163,45 @@ export default function Home({ images, error, debug }: HomeProps) {
     );
   }
 
+  const handleGiftComplete = async (data: {
+    theme: "space" | "japanese";
+    messages: string[];
+    photos: ImageProps[];
+    giftId: string;
+  }) => {
+    setIsCreatingGift(true);
+    setGiftError(null);
+
+    try {
+      const gift = await createGift({
+        theme: data.theme,
+        messages: data.messages,
+        photos: data.photos,
+        groupId: data.giftId,
+        musicPreference: {
+          volume: 0.5,
+          isPlaying: true,
+        },
+      });
+
+      console.log("Gift created:", gift);
+      setShowGiftFlow(false);
+
+      // Show success message and copy gift ID to clipboard
+      await navigator.clipboard.writeText(gift.id);
+      alert(
+        `Gift created successfully! ID: ${gift.id}\n\nThe ID has been copied to your clipboard.`
+      );
+    } catch (error) {
+      console.error("Error creating gift:", error);
+      setGiftError(
+        error instanceof Error ? error.message : "Failed to create gift"
+      );
+    } finally {
+      setIsCreatingGift(false);
+    }
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       <PageTransition isPresent={!hasSelectedTheme}>
@@ -166,9 +210,7 @@ export default function Home({ images, error, debug }: HomeProps) {
             // Delay the state change to allow for exit animation
             setTimeout(() => setHasSelectedTheme(true), 300);
           }}
-          onCreateGift={function (): void {
-            throw new Error("Function not implemented.");
-          }}
+          onCreateGift={() => setShowGiftFlow(true)}
         />
       </PageTransition>
 
@@ -187,6 +229,13 @@ export default function Home({ images, error, debug }: HomeProps) {
           />
         )}
       </PageTransition>
+
+      {showGiftFlow && (
+        <CreateGiftFlow
+          onClose={() => setShowGiftFlow(false)}
+          onComplete={handleGiftComplete}
+        />
+      )}
     </div>
   );
 }

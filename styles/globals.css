@@ -1,10 +1,13 @@
+/* stylelint-disable CssSyntaxError */
+/* stylelint-disable CssSyntaxError */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   /* Better mobile tap targets */
-  button, a {
+  button,
+  a {
     @apply min-h-[44px] min-w-[44px];
   }
 
@@ -147,15 +150,3 @@
 .vh-fix {
   height: calc(var(--vh, 1vh) * 100);
 }
-
-/* Add this JavaScript to your main component or layout:
-useEffect(() => {
-  const updateVH = () => {
-    let vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--vh', `${vh}px`);
-  };
-  
-  updateVH();
-  window.addEventListener('resize', updateVH);
-  return () => window.removeEventListener('resize', updateVH);
-}, []);

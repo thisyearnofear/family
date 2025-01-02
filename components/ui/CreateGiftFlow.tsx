@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useDropzone } from "react-dropzone";
@@ -7,9 +7,28 @@ import {
   PhotoIcon,
   PencilSquareIcon,
   ArrowPathIcon,
+  CalendarIcon,
+  PauseIcon,
+  PlayIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { uploadPhotos, createGift } from "@utils/api";
-import type { ImageProps, UploadResult } from "@utils/types";
+import { uploadPhotos } from "@utils/api/pinata";
+import type { ImageProps, UploadResult } from "@utils/types/types";
+
+interface PhotoUpload {
+  file: File;
+  preview: string;
+  dateTaken?: string;
+  monthAssigned?: string;
+  uploadStatus?: "pending" | "uploading" | "complete" | "error";
+  ipfsHash?: string;
+}
+
+interface MonthGroup {
+  month: string;
+  photos: PhotoUpload[];
+}
 
 interface CreateGiftFlowProps {
   onClose: () => void;
@@ -20,6 +39,15 @@ interface CreateGiftFlowProps {
     giftId: string;
   }) => void;
 }
+
+const MAX_PHOTOS_PER_MONTH = 3;
+
+const SONGS = [
+  { path: "/sounds/background-music.mp3", title: "Hopes and Dreams" },
+  { path: "/sounds/grow-old.mp3", title: "Grow Old Together" },
+  { path: "/sounds/mama.mp3", title: "Mamamayako" },
+  { path: "/sounds/baba.mp3", title: "Baba, I Understand" },
+];
 
 const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
   onClose,
@@ -33,18 +61,185 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
     "Connection transcends distance, time, space: stars bound-unbreakable constellation.",
     "Love is infinite. Happiness innate. Seeing, believing ....",
   ]);
-  const [photos, setPhotos] = useState<File[]>([]);
+  const [photos, setPhotos] = useState<PhotoUpload[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [monthGroups, setMonthGroups] = useState<MonthGroup[]>([]);
+  const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
+  const [currentPlayingSong, setCurrentPlayingSong] = useState<string | null>(
+    null
+  );
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setPhotos((prev) => [...prev, ...acceptedFiles]);
+  // Add audio player ref
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    // Cleanup audio on unmount
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
+    };
   }, []);
+
+  // Start uploading photos as soon as they're added
+  useEffect(() => {
+    const pendingPhotos = photos.filter(
+      (p) => !p.uploadStatus || p.uploadStatus === "pending"
+    );
+    if (pendingPhotos.length > 0) {
+      uploadPendingPhotos(pendingPhotos);
+    }
+  }, [photos]);
+
+  const uploadPendingPhotos = async (pendingPhotos: PhotoUpload[]) => {
+    const tempId = Math.random().toString(36).substring(7);
+
+    for (let i = 0; i < pendingPhotos.length; i++) {
+      const photo = pendingPhotos[i];
+      setPhotos((prev) =>
+        prev.map((p) => (p === photo ? { ...p, uploadStatus: "uploading" } : p))
+      );
+
+      try {
+        const results = await uploadPhotos([photo.file], tempId);
+        const result = results[0];
+
+        setPhotos((prev) =>
+          prev.map((p) =>
+            p === photo
+              ? {
+                  ...p,
+                  uploadStatus: "complete",
+                  ipfsHash: result.ipfsHash,
+                }
+              : p
+          )
+        );
+      } catch (error) {
+        console.error(`Error uploading ${photo.file.name}:`, error);
+        setPhotos((prev) =>
+          prev.map((p) => (p === photo ? { ...p, uploadStatus: "error" } : p))
+        );
+      }
+    }
+  };
+
+  const handleSongSelect = (songPath: string) => {
+    setSelectedSongs((prev) => {
+      if (prev.includes(songPath)) {
+        return prev.filter((p) => p !== songPath);
+      }
+      if (prev.length >= 2) {
+        return [...prev.slice(1), songPath];
+      }
+      return [...prev, songPath];
+    });
+  };
+
+  const togglePlaySong = (songPath: string) => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio(songPath);
+    }
+
+    if (currentPlayingSong === songPath) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = songPath;
+        audioRef.current.play();
+      }
+      setCurrentPlayingSong(songPath);
+      setIsPlaying(true);
+    }
+  };
+
+  const extractDateFromFileName = (fileName: string): string | null => {
+    const dateMatch = fileName.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      try {
+        const date = new Date(dateMatch[1]);
+        if (!isNaN(date.getTime())) {
+          return date.toISOString();
+        }
+      } catch (e) {
+        console.warn("Invalid date in filename:", fileName);
+      }
+    }
+    return null;
+  };
+
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      const newPhotos = acceptedFiles.map((file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+        dateTaken:
+          extractDateFromFileName(file.name) ||
+          new Date(file.lastModified).toISOString(),
+      }));
+
+      setPhotos((prev) => [...prev, ...newPhotos]);
+      organizePhotosByMonth([...photos, ...newPhotos]);
+    },
+    [photos]
+  );
+
+  const organizePhotosByMonth = (photoList: PhotoUpload[]) => {
+    const groups: { [key: string]: PhotoUpload[] } = {};
+
+    photoList.forEach((photo) => {
+      const date = new Date(photo.dateTaken || new Date());
+      const monthKey = date.toLocaleString("default", {
+        month: "long",
+        year: "numeric",
+      });
+
+      if (!groups[monthKey]) {
+        groups[monthKey] = [];
+      }
+
+      if (groups[monthKey].length < MAX_PHOTOS_PER_MONTH) {
+        groups[monthKey].push(photo);
+      }
+    });
+
+    const sortedGroups = Object.entries(groups)
+      .map(([month, photos]) => ({ month, photos }))
+      .sort((a, b) => {
+        const dateA = new Date(a.photos[0].dateTaken || "");
+        const dateB = new Date(b.photos[0].dateTaken || "");
+        return dateA.getTime() - dateB.getTime();
+      });
+
+    setMonthGroups(sortedGroups);
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       "image/*": [".jpeg", ".jpg", ".png", ".webp"],
+    },
+    multiple: true,
+    maxFiles: MAX_PHOTOS_PER_MONTH * 12, // Maximum 12 photos per month for a year
+    maxSize: 10 * 1024 * 1024, // 10MB limit per file
+    onDropRejected: (rejectedFiles) => {
+      const errors = rejectedFiles.map((file) => ({
+        name: file.file.name,
+        errors: file.errors.map((err) => err.message),
+      }));
+      setUploadError(
+        `Some files were rejected: ${JSON.stringify(errors, null, 2)}`
+      );
     },
   });
 
@@ -56,56 +251,107 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
     });
   };
 
+  const handleDateChange = (photoIndex: number, newDate: string) => {
+    setPhotos((prev) => {
+      const updated = [...prev];
+      updated[photoIndex] = {
+        ...updated[photoIndex],
+        dateTaken: new Date(newDate).toISOString(),
+      };
+      return updated;
+    });
+    organizePhotosByMonth(photos);
+  };
+
   const handleComplete = async () => {
     if (!theme) return;
     setIsUploading(true);
+    setUploadError(null);
 
     try {
-      // Generate a temporary ID for the gift group
-      const tempId = Math.random().toString(36).substring(7);
-
-      // Upload photos to Pinata
-      const totalPhotos = photos.length;
-      const uploadedPhotos = [];
-
-      for (let i = 0; i < photos.length; i++) {
-        const results = await uploadPhotos([photos[i]], tempId);
-        const transformedResults = results.map((result: UploadResult) => ({
-          id: result.id,
-          ipfsHash: result.ipfsHash,
-          name: result.name,
-          width: result.width,
-          height: result.height,
-          dateTaken: result.dateTaken,
-          dateModified: result.dateModified,
-          description: result.description,
-          groupId: result.groupId,
-        }));
-        uploadedPhotos.push(...transformedResults);
-        setUploadProgress(((i + 1) / totalPhotos) * 100);
+      // Filter out any failed uploads
+      const successfulUploads = photos.filter(
+        (p) => p.uploadStatus === "complete"
+      );
+      if (successfulUploads.length === 0) {
+        throw new Error("No successfully uploaded photos");
       }
 
-      // Create the gift
-      const gift = createGift({
-        theme,
-        messages,
-        photos: uploadedPhotos,
-        groupId: uploadedPhotos[0].groupId,
-      });
+      const uploadedPhotos: ImageProps[] = successfulUploads.map(
+        (photo, index) => ({
+          id: index,
+          ipfsHash: photo.ipfsHash!,
+          name: photo.file.name,
+          description: null,
+          dateTaken: photo.dateTaken,
+          dateModified: new Date().toISOString(),
+          width: 1280,
+          height: 720,
+          groupId: photo.file.name,
+        })
+      );
 
       onComplete({
         theme,
         messages,
         photos: uploadedPhotos,
-        giftId: gift.id,
+        giftId: uploadedPhotos[0].groupId!,
       });
     } catch (error) {
       console.error("Error creating gift:", error);
-      // TODO: Show error message to user
+      setUploadError(
+        error instanceof Error ? error.message : "Failed to create gift"
+      );
     } finally {
       setIsUploading(false);
     }
   };
+
+  const renderMusicSelection = () => (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold">Select Music (Max 2)</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {SONGS.map((song) => (
+          <div
+            key={song.path}
+            className={`p-4 rounded-lg border ${
+              selectedSongs.includes(song.path)
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-200"
+            } hover:border-blue-300 transition-colors cursor-pointer`}
+            onClick={() => handleSongSelect(song.path)}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-medium">{song.title}</span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    togglePlaySong(song.path);
+                  }}
+                  className="p-2 rounded-full hover:bg-gray-100"
+                >
+                  {currentPlayingSong === song.path && isPlaying ? (
+                    <PauseIcon className="w-5 h-5" />
+                  ) : (
+                    <PlayIcon className="w-5 h-5" />
+                  )}
+                </button>
+                {selectedSongs.includes(song.path) && (
+                  <CheckCircleIcon className="w-5 h-5 text-blue-500" />
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {selectedSongs.length > 0 && (
+        <p className="text-sm text-gray-600">
+          Selected: {selectedSongs.length}/2 songs
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <motion.div
@@ -200,7 +446,7 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
           )}
 
           {step === 3 && (
-            <div className="space-y-6">
+            <div className="space-y-8">
               <div
                 {...getRootProps()}
                 className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
@@ -215,41 +461,81 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
                   Drag & drop photos here, or click to select
                 </p>
                 <p className="text-sm text-gray-500 mt-2">
-                  Supports JPEG, PNG, and WebP
+                  Supports JPEG, PNG, and WebP (max 3 photos per month)
                 </p>
               </div>
 
-              {photos.length > 0 && (
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-4">
-                    {photos.length} photos selected
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {photos.map((file, index) => (
-                      <div
-                        key={index}
-                        className="aspect-square rounded-lg bg-gray-100 relative"
-                      >
-                        <Image
-                          src={URL.createObjectURL(file)}
-                          alt={`Upload preview ${index + 1}`}
-                          fill
-                          className="object-cover rounded-lg"
-                        />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPhotos((prev) =>
-                              prev.filter((_, i) => i !== index)
-                            );
-                          }}
-                          className="absolute top-2 right-2 p-1 rounded-full bg-black/50 text-white hover:bg-black/70"
-                        >
-                          ×
-                        </button>
+              {renderMusicSelection()}
+
+              {monthGroups.length > 0 && (
+                <div className="space-y-8">
+                  {monthGroups.map((group, groupIndex) => (
+                    <div key={group.month} className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium text-gray-900">
+                          {group.month} ({group.photos.length}/12 photos)
+                        </h3>
+                        {group.photos.length >= MAX_PHOTOS_PER_MONTH && (
+                          <span className="text-sm text-amber-600">
+                            Month is full
+                          </span>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {group.photos.map((photo, photoIndex) => (
+                          <div
+                            key={`${groupIndex}-${photoIndex}`}
+                            className="aspect-square rounded-lg bg-gray-100 relative group"
+                          >
+                            <Image
+                              src={photo.preview}
+                              alt={`Upload preview ${photoIndex + 1}`}
+                              fill
+                              className="object-cover rounded-lg"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center p-4">
+                              <input
+                                type="date"
+                                value={photo.dateTaken?.split("T")[0] || ""}
+                                onChange={(e) =>
+                                  handleDateChange(
+                                    photos.indexOf(photo),
+                                    e.target.value
+                                  )
+                                }
+                                className="px-2 py-1 rounded bg-white/90 text-sm mb-2 w-full"
+                              />
+                              <div className="mb-2">
+                                {photo.uploadStatus === "uploading" ? (
+                                  <ArrowPathIcon className="w-5 h-5 text-white animate-spin" />
+                                ) : photo.uploadStatus === "complete" ? (
+                                  <CheckCircleIcon className="w-5 h-5 text-green-500" />
+                                ) : photo.uploadStatus === "error" ? (
+                                  <ExclamationCircleIcon className="w-5 h-5 text-red-500" />
+                                ) : null}
+                              </div>
+                              {photo.uploadStatus !== "uploading" && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPhotos((prev) =>
+                                      prev.filter((p) => p !== photo)
+                                    );
+                                    organizePhotosByMonth(
+                                      photos.filter((p) => p !== photo)
+                                    );
+                                  }}
+                                  className="p-1 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -264,6 +550,12 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
                   <p className="text-sm text-gray-600 text-center">
                     Uploading photos... {Math.round(uploadProgress)}%
                   </p>
+                </div>
+              )}
+
+              {uploadError && (
+                <div className="p-4 bg-red-50 text-red-600 rounded-lg">
+                  {uploadError}
                 </div>
               )}
             </div>
@@ -296,11 +588,16 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
                 }
               }}
               disabled={
-                (step === 1 && !theme) || (step === 3 && photos.length === 0)
+                (step === 1 && !theme) ||
+                (step === 3 && (photos.length === 0 || isUploading))
               }
               className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {step === 3 ? "Create Gift" : "Continue"}
+              {step === 3
+                ? isUploading
+                  ? "Creating..."
+                  : "Create Gift"
+                : "Continue"}
             </button>
           </div>
         </div>
