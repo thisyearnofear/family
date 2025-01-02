@@ -47,7 +47,7 @@ const PageTransition: React.FC<PageTransitionProps> = ({
           animate="animate"
           exit="exit"
           variants={variants}
-          className="fixed inset-0"
+          className="absolute inset-0 overflow-auto"
         >
           {children}
         </motion.div>

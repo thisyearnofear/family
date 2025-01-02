@@ -159,7 +159,7 @@ export default function Home({ images, error, debug }: HomeProps) {
   }
 
   return (
-    <>
+    <div className="min-h-screen relative overflow-hidden">
       <PageTransition isPresent={!hasSelectedTheme}>
         <WelcomeScreen
           onThemeSelect={() => {
@@ -187,6 +187,6 @@ export default function Home({ images, error, debug }: HomeProps) {
           />
         )}
       </PageTransition>
-    </>
+    </div>
   );
 }
