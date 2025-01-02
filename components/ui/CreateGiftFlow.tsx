@@ -15,6 +15,18 @@ import {
 } from "@heroicons/react/24/outline";
 import { uploadPhotos } from "@utils/api/pinata";
 import type { ImageProps, UploadResult } from "@utils/types/types";
+import MonthlyCollage from "./MonthlyCollage";
+import { useTheme } from "../../contexts/ThemeContext";
+import dynamic from "next/dynamic";
+import Collage from "./Collage";
+
+// Dynamically import theme components
+const SpaceIntro = dynamic(() => import("../themes/SpaceIntro"), {
+  ssr: false,
+});
+const JapaneseIntro = dynamic(() => import("../themes/JapaneseIntro"), {
+  ssr: false,
+});
 
 interface PhotoUpload {
   file: File;
@@ -40,13 +52,29 @@ interface CreateGiftFlowProps {
   }) => void;
 }
 
-const MAX_PHOTOS_PER_MONTH = 3;
+interface Song {
+  path: string;
+  title: string;
+}
 
-const SONGS = [
+const SONGS: Song[] = [
   { path: "/sounds/background-music.mp3", title: "Hopes and Dreams" },
   { path: "/sounds/grow-old.mp3", title: "Grow Old Together" },
   { path: "/sounds/mama.mp3", title: "Mamamayako" },
   { path: "/sounds/baba.mp3", title: "Baba, I Understand" },
+];
+
+const MAX_PHOTOS_PER_MONTH = 3;
+const MONTHS_PER_BATCH = 4;
+
+const STEPS = [
+  { id: 1, title: "Choose Theme" },
+  { id: 2, title: "Upload First Set of Photos" },
+  { id: 3, title: "Personalize Messages" },
+  { id: 4, title: "Upload More Photos" },
+  { id: 5, title: "Select Music" },
+  { id: 6, title: "Upload Final Photos" },
+  { id: 7, title: "Preview & Share" },
 ];
 
 const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
@@ -71,6 +99,8 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
     null
   );
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentBatch, setCurrentBatch] = useState(1);
+  const [showIntro, setShowIntro] = useState(true);
 
   // Add audio player ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -307,9 +337,31 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
     }
   };
 
+  const renderPhotoUploadGuidance = () => (
+    <div className="mb-6 bg-blue-50 p-4 rounded-lg text-sm text-blue-700 text-center">
+      <p>Photos will be automatically organized by date taken.</p>
+      <ul className="mt-2 space-y-1">
+        <li>• Upload up to {MAX_PHOTOS_PER_MONTH} photos for any month</li>
+        <li>• Hover over photos to adjust their dates</li>
+        <li>• You can preview and edit everything before finalizing</li>
+      </ul>
+    </div>
+  );
+
   const renderMusicSelection = () => (
-    <div className="space-y-4">
+    <div className="space-y-4 text-center">
       <h3 className="text-lg font-semibold">Select Music (Max 2)</h3>
+      <p className="text-sm text-gray-600 mb-6">
+        by{" "}
+        <a
+          href="https://open.spotify.com/artist/3yhUYybUxwJn1or7zHXWHy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800 underline"
+        >
+          PAPA
+        </a>
+      </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {SONGS.map((song) => (
           <div
@@ -353,6 +405,356 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
     </div>
   );
 
+  // Auto-transition after 7 seconds
+  useEffect(() => {
+    if (step === 7) {
+      const timer = setTimeout(() => {
+        setShowIntro(false);
+      }, 7000);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  // Reset intro state when leaving preview
+  useEffect(() => {
+    if (step !== 7) {
+      setShowIntro(true);
+    }
+  }, [step]);
+
+  const renderThemeCard = (selectedTheme: "space" | "japanese") => (
+    <div
+      className={`aspect-video rounded-xl border-2 p-4 flex flex-col items-center justify-center gap-4 ${
+        selectedTheme === "space"
+          ? "border-blue-500 bg-blue-50"
+          : "border-red-500 bg-red-50"
+      }`}
+    >
+      {selectedTheme === "space" ? (
+        <>
+          <SparklesIcon className="w-12 h-12 text-blue-500" />
+          <div className="text-center">
+            <h3 className="font-bold text-gray-900">Space</h3>
+            <p className="text-sm text-gray-600">
+              A cosmic journey through the stars
+            </p>
+          </div>
+        </>
+      ) : (
+        <>
+          <svg
+            className="w-12 h-12 text-red-500"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path d="M12 3c-1.5 0-2.7 1.2-2.7 2.7 0 1.5 1.2 2.7 2.7 2.7s2.7-1.2 2.7-2.7C14.7 4.2 13.5 3 12 3z" />
+            <path d="M12 10.4c-2.3 0-4.2 1.9-4.2 4.2s1.9 4.2 4.2 4.2 4.2-1.9 4.2-4.2-1.9-4.2-4.2-4.2z" />
+            <path d="M12 20.6c-3.1 0-5.6-2.5-5.6-5.6s2.5-5.6 5.6-5.6 5.6 2.5 5.6 5.6-2.5 5.6-5.6 5.6z" />
+          </svg>
+          <div className="text-center">
+            <h3 className="font-bold text-gray-900">Zen</h3>
+            <p className="text-sm text-gray-600">
+              A peaceful journey through memories
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  const renderPreview = () => {
+    return (
+      <div className="space-y-8">
+        {/* Photos Timeline */}
+        <div className="rounded-lg overflow-hidden border">
+          <h3 className="text-lg font-medium p-4 border-b">Photos Timeline</h3>
+          <div className="p-4">
+            {monthGroups.map((group) => (
+              <div key={group.month} className="mb-8 last:mb-0">
+                <h4 className="text-md font-medium mb-4">{group.month}</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {group.photos.map((photo, photoIndex) => (
+                    <div
+                      key={`${group.month}-${photoIndex}`}
+                      className="aspect-square rounded-lg bg-gray-100 relative overflow-hidden group"
+                    >
+                      <Image
+                        src={photo.preview}
+                        alt={`Photo ${photoIndex + 1}`}
+                        fill
+                        className="object-cover rounded-lg"
+                      />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <CalendarIcon className="w-5 h-5 text-white" />
+                        <span className="text-white text-sm ml-2">
+                          {new Date(photo.dateTaken || "").toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Messages Preview */}
+        <div className="rounded-lg overflow-hidden border">
+          <h3 className="text-lg font-medium p-4 border-b">Messages</h3>
+          <div className="p-4 space-y-2">
+            {messages.map((message, index) => (
+              <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-gray-600">{message}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Music Preview */}
+        <div className="rounded-lg overflow-hidden border">
+          <h3 className="text-lg font-medium p-4 border-b">Selected Music</h3>
+          <div className="p-4">
+            {selectedSongs.length > 0 ? (
+              <div className="space-y-2">
+                {selectedSongs.map((songPath) => {
+                  const song = SONGS.find((s) => s.path === songPath);
+                  return (
+                    <div
+                      key={songPath}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
+                      <span className="font-medium">{song?.title}</span>
+                      <button
+                        onClick={() => togglePlaySong(songPath)}
+                        className="p-2 rounded-full hover:bg-gray-200"
+                      >
+                        {currentPlayingSong === songPath && isPlaying ? (
+                          <PauseIcon className="w-5 h-5" />
+                        ) : (
+                          <PlayIcon className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center">No music selected</p>
+            )}
+          </div>
+        </div>
+
+        {/* Theme Preview */}
+        <div className="rounded-lg overflow-hidden border bg-gray-50">
+          <h3 className="text-lg font-medium p-4 border-b bg-white">
+            Selected Theme
+          </h3>
+          <div className="p-4">{theme && renderThemeCard(theme)}</div>
+        </div>
+
+        <button
+          onClick={handleComplete}
+          className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          disabled={isUploading}
+        >
+          {isUploading ? "Creating Gift..." : "Create Gift & Get Sharing ID"}
+        </button>
+      </div>
+    );
+  };
+
+  const renderContent = () => {
+    switch (step) {
+      case 1: // Theme Selection
+        return (
+          <div className="grid md:grid-cols-2 gap-6 text-center">
+            <button
+              onClick={() => setTheme("space")}
+              className={`aspect-video rounded-xl border-2 p-4 flex flex-col items-center justify-center gap-4 transition-all ${
+                theme === "space"
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-200 hover:border-blue-200 hover:bg-gray-50"
+              }`}
+            >
+              <SparklesIcon className="w-12 h-12 text-blue-500" />
+              <div className="text-center">
+                <h3 className="font-bold text-gray-900">Space</h3>
+                <p className="text-sm text-gray-600">
+                  A cosmic journey through the stars
+                </p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setTheme("japanese")}
+              className={`aspect-video rounded-xl border-2 p-4 flex flex-col items-center justify-center gap-4 transition-all ${
+                theme === "japanese"
+                  ? "border-red-500 bg-red-50"
+                  : "border-gray-200 hover:border-red-200 hover:bg-gray-50"
+              }`}
+            >
+              <svg
+                className="w-12 h-12 text-red-500"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path d="M12 3c-1.5 0-2.7 1.2-2.7 2.7 0 1.5 1.2 2.7 2.7 2.7s2.7-1.2 2.7-2.7C14.7 4.2 13.5 3 12 3z" />
+                <path d="M12 10.4c-2.3 0-4.2 1.9-4.2 4.2s1.9 4.2 4.2 4.2 4.2-1.9 4.2-4.2-1.9-4.2-4.2-4.2z" />
+                <path d="M12 20.6c-3.1 0-5.6-2.5-5.6-5.6s2.5-5.6 5.6-5.6 5.6 2.5 5.6 5.6-2.5 5.6-5.6 5.6z" />
+              </svg>
+              <div className="text-center">
+                <h3 className="font-bold text-gray-900">Zen</h3>
+                <p className="text-sm text-gray-600">
+                  A peaceful journey through memories
+                </p>
+              </div>
+            </button>
+          </div>
+        );
+
+      case 2: // First Photos
+      case 4: // More Photos
+      case 6: // Final Photos
+        return (
+          <div className="space-y-8">
+            {renderPhotoUploadGuidance()}
+            <div
+              {...getRootProps()}
+              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+                isDragActive
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-300 hover:border-gray-400"
+              }`}
+            >
+              <input {...getInputProps()} />
+              <PhotoIcon className="w-12 h-12 mx-auto text-gray-400" />
+              <p className="mt-4 text-gray-600">
+                Drag & drop photos here, or click to select
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                Supports JPEG, PNG, and WebP (max 3 photos per month)
+              </p>
+            </div>
+
+            {monthGroups.length > 0 && (
+              <div className="space-y-8">
+                {monthGroups.map((group) => (
+                  <div key={group.month} className="space-y-4">
+                    <div className="flex items-center justify-between text-center">
+                      <h3 className="text-lg font-medium text-gray-900 w-full">
+                        {group.month} ({group.photos.length}/
+                        {MAX_PHOTOS_PER_MONTH} photos)
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {group.photos.map((photo, photoIndex) => (
+                        <div
+                          key={`${group.month}-${photoIndex}`}
+                          className="aspect-square rounded-lg bg-gray-100 relative group"
+                        >
+                          <Image
+                            src={photo.preview}
+                            alt={`Upload preview ${photoIndex + 1}`}
+                            fill
+                            className="object-cover rounded-lg"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center p-4">
+                            <input
+                              type="date"
+                              value={photo.dateTaken?.split("T")[0] || ""}
+                              onChange={(e) =>
+                                handleDateChange(
+                                  photos.indexOf(photo),
+                                  e.target.value
+                                )
+                              }
+                              className="px-2 py-1 rounded bg-white/90 text-sm mb-2 w-full"
+                            />
+                            <div className="mb-2">
+                              {photo.uploadStatus === "uploading" ? (
+                                <ArrowPathIcon className="w-5 h-5 text-white animate-spin" />
+                              ) : photo.uploadStatus === "complete" ? (
+                                <CheckCircleIcon className="w-5 h-5 text-green-500" />
+                              ) : photo.uploadStatus === "error" ? (
+                                <ExclamationCircleIcon className="w-5 h-5 text-red-500" />
+                              ) : null}
+                            </div>
+                            {photo.uploadStatus !== "uploading" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPhotos((prev) =>
+                                    prev.filter((p) => p !== photo)
+                                  );
+                                  organizePhotosByMonth(
+                                    photos.filter((p) => p !== photo)
+                                  );
+                                }}
+                                className="p-1 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case 3: // Messages
+        return (
+          <div className="space-y-6 text-center">
+            <p className="text-gray-600 mb-6">
+              Customize your messages for each month. You can edit these later.
+            </p>
+            {messages.map((message, index) => (
+              <div key={index} className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Message {index + 1}
+                </label>
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e) => handleMessageChange(index, e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
+                  placeholder="Enter your message..."
+                />
+              </div>
+            ))}
+          </div>
+        );
+
+      case 5: // Music Selection
+        return renderMusicSelection();
+
+      case 7: // Review & Share
+        return (
+          <div className="space-y-8">
+            <div className="bg-green-50 p-4 rounded-lg text-center">
+              <h3 className="font-medium text-green-800">Almost there!</h3>
+              <p className="text-green-700 mt-1">
+                Review your gift below. You can make changes to any section
+                before finalizing.
+              </p>
+            </div>
+            {renderPreview()}
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -367,239 +769,46 @@ const CreateGiftFlow: React.FC<CreateGiftFlowProps> = ({
             Create Your Own Gift
           </h2>
           <p className="text-gray-600 mt-1">
-            Step {step} of 3:{" "}
-            {step === 1
-              ? "Choose Theme"
-              : step === 2
-              ? "Customize Messages"
-              : "Upload Photos"}
+            Step {step} of {STEPS.length}:{" "}
+            {STEPS.find((s) => s.id === step)?.title}
           </p>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {step === 1 && (
-            <div className="grid md:grid-cols-2 gap-6">
-              <button
-                onClick={() => setTheme("space")}
-                className={`aspect-video rounded-xl border-2 p-4 flex flex-col items-center justify-center gap-4 transition-all ${
-                  theme === "space"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-blue-200 hover:bg-gray-50"
-                }`}
-              >
-                <SparklesIcon className="w-12 h-12 text-blue-500" />
-                <div className="text-center">
-                  <h3 className="font-bold text-gray-900">Space</h3>
-                  <p className="text-sm text-gray-600">
-                    A cosmic journey through the stars
-                  </p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => setTheme("japanese")}
-                className={`aspect-video rounded-xl border-2 p-4 flex flex-col items-center justify-center gap-4 transition-all ${
-                  theme === "japanese"
-                    ? "border-red-500 bg-red-50"
-                    : "border-gray-200 hover:border-red-200 hover:bg-gray-50"
-                }`}
-              >
-                <svg
-                  className="w-12 h-12 text-red-500"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <path d="M12 3c-1.5 0-2.7 1.2-2.7 2.7 0 1.5 1.2 2.7 2.7 2.7s2.7-1.2 2.7-2.7C14.7 4.2 13.5 3 12 3z" />
-                  <path d="M12 10.4c-2.3 0-4.2 1.9-4.2 4.2s1.9 4.2 4.2 4.2 4.2-1.9 4.2-4.2-1.9-4.2-4.2-4.2z" />
-                  <path d="M12 20.6c-3.1 0-5.6-2.5-5.6-5.6s2.5-5.6 5.6-5.6 5.6 2.5 5.6 5.6-2.5 5.6-5.6 5.6z" />
-                </svg>
-                <div className="text-center">
-                  <h3 className="font-bold text-gray-900">Zen</h3>
-                  <p className="text-sm text-gray-600">
-                    A peaceful journey through memories
-                  </p>
-                </div>
-              </button>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-6">
-              {messages.map((message, index) => (
-                <div key={index} className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Message {index + 1}
-                  </label>
-                  <input
-                    type="text"
-                    value={message}
-                    onChange={(e) => handleMessageChange(index, e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your message..."
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-8">
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                  isDragActive
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-300 hover:border-gray-400"
-                }`}
-              >
-                <input {...getInputProps()} />
-                <PhotoIcon className="w-12 h-12 mx-auto text-gray-400" />
-                <p className="mt-4 text-gray-600">
-                  Drag & drop photos here, or click to select
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Supports JPEG, PNG, and WebP (max 3 photos per month)
-                </p>
-              </div>
-
-              {renderMusicSelection()}
-
-              {monthGroups.length > 0 && (
-                <div className="space-y-8">
-                  {monthGroups.map((group, groupIndex) => (
-                    <div key={group.month} className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-medium text-gray-900">
-                          {group.month} ({group.photos.length}/12 photos)
-                        </h3>
-                        {group.photos.length >= MAX_PHOTOS_PER_MONTH && (
-                          <span className="text-sm text-amber-600">
-                            Month is full
-                          </span>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {group.photos.map((photo, photoIndex) => (
-                          <div
-                            key={`${groupIndex}-${photoIndex}`}
-                            className="aspect-square rounded-lg bg-gray-100 relative group"
-                          >
-                            <Image
-                              src={photo.preview}
-                              alt={`Upload preview ${photoIndex + 1}`}
-                              fill
-                              className="object-cover rounded-lg"
-                            />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center p-4">
-                              <input
-                                type="date"
-                                value={photo.dateTaken?.split("T")[0] || ""}
-                                onChange={(e) =>
-                                  handleDateChange(
-                                    photos.indexOf(photo),
-                                    e.target.value
-                                  )
-                                }
-                                className="px-2 py-1 rounded bg-white/90 text-sm mb-2 w-full"
-                              />
-                              <div className="mb-2">
-                                {photo.uploadStatus === "uploading" ? (
-                                  <ArrowPathIcon className="w-5 h-5 text-white animate-spin" />
-                                ) : photo.uploadStatus === "complete" ? (
-                                  <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                                ) : photo.uploadStatus === "error" ? (
-                                  <ExclamationCircleIcon className="w-5 h-5 text-red-500" />
-                                ) : null}
-                              </div>
-                              {photo.uploadStatus !== "uploading" && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setPhotos((prev) =>
-                                      prev.filter((p) => p !== photo)
-                                    );
-                                    organizePhotosByMonth(
-                                      photos.filter((p) => p !== photo)
-                                    );
-                                  }}
-                                  className="p-1 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
-                                >
-                                  ×
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {isUploading && (
-                <div className="space-y-2">
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                  <p className="text-sm text-gray-600 text-center">
-                    Uploading photos... {Math.round(uploadProgress)}%
-                  </p>
-                </div>
-              )}
-
-              {uploadError && (
-                <div className="p-4 bg-red-50 text-red-600 rounded-lg">
-                  {uploadError}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <div className="flex-1 overflow-y-auto p-6">{renderContent()}</div>
 
         {/* Footer */}
         <div className="p-6 border-t bg-gray-50 flex justify-between">
           <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-900"
-          >
-            Cancel
-          </button>
-          <div className="flex gap-3">
-            {step > 1 && (
-              <button
-                onClick={() => setStep((prev) => prev - 1)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-900"
-              >
-                Back
-              </button>
-            )}
-            <button
-              onClick={() => {
-                if (step === 3) {
-                  handleComplete();
-                } else {
-                  setStep((prev) => prev + 1);
+            onClick={() => {
+              if (step > 1) {
+                setStep(step - 1);
+                if ([2, 4, 6].includes(step)) {
+                  setCurrentBatch(Math.max(1, currentBatch - 1));
                 }
-              }}
-              disabled={
-                (step === 1 && !theme) ||
-                (step === 3 && (photos.length === 0 || isUploading))
+              } else {
+                onClose();
               }
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {step === 3
-                ? isUploading
-                  ? "Creating..."
-                  : "Create Gift"
-                : "Continue"}
-            </button>
-          </div>
+            }}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+          >
+            {step === 1 ? "Cancel" : "Back"}
+          </button>
+
+          <button
+            onClick={() => {
+              if (step < STEPS.length) {
+                setStep(step + 1);
+                if ([2, 4].includes(step)) {
+                  setCurrentBatch(currentBatch + 1);
+                }
+              }
+            }}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            disabled={isUploading}
+          >
+            {step === STEPS.length ? "Complete" : "Continue"}
+          </button>
         </div>
       </div>
     </motion.div>
