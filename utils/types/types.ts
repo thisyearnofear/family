@@ -3,15 +3,13 @@
 // Base image properties
 export interface ImageProps {
   id: number;
-  ipfsHash: string;
   name: string;
-  description: string | null;
-  dateTaken?: string;
-  dateModified?: string;
+  description: string;
+  ipfsHash: string;
+  dateTaken: string;
   width: number;
   height: number;
-  groupId?: string;
-  blurDataUrl?: string;
+  url: string;
 }
 
 // Modal related types
@@ -55,6 +53,32 @@ export interface PinataFile {
 export interface PinataListResponse {
   files: PinataFile[];
   next_page_token?: string;
+}
+
+// Group response types
+export interface GroupFile {
+  id: string;
+  name: string | null;
+  cid: string;
+  size: number;
+  groupId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: {
+    keyValues?: {
+      dateTaken?: string;
+      [key: string]: any;
+    };
+  };
+}
+
+export interface GroupResponseItem {
+  id: string;
+  name: string;
+  items: GroupFile[];
+  total: number;
+  pageSize: number;
+  pageNumber: number;
 }
 
 // Upload types
@@ -132,4 +156,12 @@ export interface FileListResponse {
   total: number;
   pageSize: number;
   pageNumber: number;
+}
+
+export interface GiftMetadata {
+  theme: "space" | "japanese";
+  images: ImageProps[];
+  messages: string[];
+  music: string[];
+  createdAt: string;
 }

@@ -6,17 +6,32 @@ const ZenBackground = dynamic(() => import("./ZenBackground"), { ssr: false });
 
 interface JapaneseIntroProps {
   onComplete: () => void;
+  messages?: string[];
 }
 
-const JapaneseIntro: React.FC<JapaneseIntroProps> = ({ onComplete }) => {
+const JapaneseIntro: React.FC<JapaneseIntroProps> = ({
+  onComplete,
+  messages = [],
+}) => {
+  console.log("🍁 JapaneseIntro mounted");
+
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
 
-  const introTexts = [
-    "Family is constant — gravity's centre, anchor in the cosmos.",
-    "Every memory, an imprint of love, laughter, togetherness: etched in the universe.",
-    "Connection transcends distance, time, space: stars bound-unbreakable constellation.",
-    "Love is infinite. Happiness innate. Seeing, believing ....",
-  ];
+  const introTexts =
+    messages.length > 0
+      ? messages
+      : [
+          "Family is constant — gravity's centre, anchor in the cosmos.",
+          "Every memory, an imprint of love, laughter, togetherness: etched in the universe.",
+          "Connection transcends distance, time, space: stars bound-unbreakable constellation.",
+          "Love is infinite. Happiness innate. Seeing, believing ....",
+        ];
+
+  console.log("🍁 JapaneseIntro using messages:", {
+    providedMessages: messages,
+    usingDefaultTexts: messages.length === 0,
+    finalTexts: introTexts,
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -32,6 +47,12 @@ const JapaneseIntro: React.FC<JapaneseIntroProps> = ({ onComplete }) => {
 
     return () => clearInterval(interval);
   }, [introTexts.length, onComplete]);
+
+  useEffect(() => {
+    return () => {
+      console.log("🍁 JapaneseIntro unmounted");
+    };
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-white">
@@ -69,6 +90,7 @@ const JapaneseIntro: React.FC<JapaneseIntroProps> = ({ onComplete }) => {
         exit={{ opacity: 0, y: 20 }}
         onClick={onComplete}
         className="fixed bottom-8 right-8 px-6 py-3 rounded-full bg-stone-900/10 hover:bg-stone-900/20 backdrop-blur-sm text-stone-900 font-medium transition-colors"
+        style={{ zIndex: 2 }}
       >
         Skip Intro →
       </motion.button>

@@ -4,18 +4,33 @@ import * as THREE from "three";
 
 interface SpaceIntroProps {
   onComplete: () => void;
+  messages?: string[];
 }
 
-const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
+const SpaceIntro: React.FC<SpaceIntroProps> = ({
+  onComplete,
+  messages = [],
+}) => {
+  console.log("🌟 SpaceIntro mounted with messages:", messages);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
 
-  const introTexts = [
-    "Family is constant — gravity's centre, anchor in the cosmos.",
-    "Every memory, an imprint of love, laughter, togetherness: etched in the universe.",
-    "Connection transcends distance, time, space: stars bound-unbreakable constellation.",
-    "Love is infinite. Happiness innate. Seeing, believing ....",
-  ];
+  const introTexts =
+    messages.length > 0
+      ? messages
+      : [
+          "Family is constant — gravity's centre, anchor in the cosmos.",
+          "Every memory, an imprint of love, laughter, togetherness: etched in the universe.",
+          "Connection transcends distance, time, space: stars bound-unbreakable constellation.",
+          "Love is infinite. Happiness innate. Seeing, believing ....",
+        ];
+
+  console.log("🌟 Using texts:", {
+    providedMessages: messages,
+    usingDefaultTexts: messages.length === 0,
+    finalTexts: introTexts,
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -120,6 +135,7 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({ onComplete }) => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", handleResize);
       renderer.dispose();
+      console.log("🌟 SpaceIntro unmounted");
     };
   }, []);
 

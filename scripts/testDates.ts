@@ -1,32 +1,32 @@
-import { extractDateFromFileName } from "../utils/pinata/uploadPhotos";
+import { extractFileMetadata } from "../utils/api/pinata";
 import fs from "fs";
+import path from "path";
 
 async function main() {
-  const directoryPath = process.argv[2];
-  if (!directoryPath) {
-    console.error("Please provide a directory path");
-    process.exit(1);
-  }
+  const testDir = process.argv[2] || ".";
+  console.log(`Testing files in ${testDir}`);
 
   try {
-    const files = fs
-      .readdirSync(directoryPath)
-      .filter((file) => /\.(jpg|jpeg|png|gif)$/i.test(file));
+    const files = fs.readdirSync(testDir);
+    console.log(`Found ${files.length} files`);
 
-    console.log(`Found ${files.length} image files`);
+    for (const filename of files) {
+      console.log(`\nTesting ${filename}...`);
+      const filePath = path.join(testDir, filename);
+      const stats = fs.statSync(filePath);
 
-    for (const file of files) {
-      console.log(`\nTesting ${file}...`);
-      const dateFromName = extractDateFromFileName(file);
-      if (dateFromName) {
-        console.log(`Date from filename: ${dateFromName}`);
-      } else {
-        console.log("No date found in filename");
-      }
+      // Create a File object from the file
+      const fileBuffer = fs.readFileSync(filePath);
+      const file = new File([fileBuffer], filename, {
+        type: "image/jpeg",
+        lastModified: stats.mtimeMs,
+      });
+
+      const metadata = await extractFileMetadata(file);
+      console.log(`Metadata:`, metadata);
     }
   } catch (error) {
     console.error("Error:", error);
-    process.exit(1);
   }
 }
 

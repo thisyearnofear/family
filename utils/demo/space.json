@@ -1,0 +1,15 @@
+{
+    "theme": "space",
+    "images": [
+        {
+            "id": 0,
+            "name": "Space Demo 1",
+            "description": "A beautiful space memory",
+            "ipfsHash": "${process.env.NEXT_PUBLIC_SPACE_DEMO_GROUP_ID}",
+            "dateTaken": "2024-01-01T00:00:00.000Z",
+            "width": 1280,
+            "height": 720,
+            "url": "https://gateway.pinata.cloud/ipfs/${process.env.NEXT_PUBLIC_SPACE_DEMO_GROUP_ID}"
+        }
+    ]
+}

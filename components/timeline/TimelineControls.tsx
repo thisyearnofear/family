@@ -13,9 +13,9 @@ import { motion } from "framer-motion";
 interface TimelineControlsProps {
   theme: "space" | "japanese";
   isPlaying: boolean;
-  setIsPlaying: (playing: boolean) => void;
+  setIsPlaying: (value: boolean) => void;
   volume: number;
-  setVolume: (volume: number) => void;
+  setVolume: (value: number) => void;
   currentTrack: string;
   firstView: boolean;
   nextMonthLoadingProgress: number;
@@ -26,8 +26,10 @@ interface TimelineControlsProps {
   onPreviousMonth?: () => void;
   showNextMonth?: boolean;
   showPreviousMonth?: boolean;
-  isAutoHighlighting: boolean;
-  setIsAutoHighlighting: (value: boolean) => void;
+  isAutoHighlighting?: boolean;
+  setIsAutoHighlighting?: (value: boolean) => void;
+  showAutoHighlight?: boolean;
+  showMusicControls?: boolean;
 }
 
 const TimelineControls: React.FC<TimelineControlsProps> = ({
@@ -48,14 +50,35 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
   showPreviousMonth = true,
   isAutoHighlighting,
   setIsAutoHighlighting,
+  showAutoHighlight,
+  showMusicControls,
 }) => {
   const isSpaceTheme = theme === "space";
-  const bgColor = isSpaceTheme ? "bg-black/40" : "bg-stone-900/20";
-  const hoverBgColor = isSpaceTheme
-    ? "hover:bg-black/60"
-    : "hover:bg-stone-900/30";
-  const textColor = isSpaceTheme ? "text-white" : "text-stone-800";
-  const highlightColor = isSpaceTheme ? "text-blue-400" : "text-red-500";
+  const isGalleryView = currentMonth === "Gallery";
+
+  // Enhanced background colors for better visibility
+  const bgColor = isSpaceTheme
+    ? "bg-black/60"
+    : "bg-white/80 backdrop-blur-md shadow-lg";
+
+  const hoverBgColor = isSpaceTheme ? "hover:bg-black/80" : "hover:bg-white/90";
+
+  const textColor = isSpaceTheme ? "text-white" : "text-stone-900";
+
+  const highlightColor = isSpaceTheme ? "text-blue-400" : "text-red-600";
+
+  // Add month abbreviation function
+  const getAbbreviatedMonth = (monthText: string) => {
+    // If it's "Gallery", return as is
+    if (monthText === "Gallery") return monthText;
+
+    // Extract month and year
+    const [month, year] = monthText.split(" ");
+    // Get first 3 letters of month
+    const abbr = month.slice(0, 3);
+    // Return abbreviated format
+    return `${abbr} ${year}`;
+  };
 
   return (
     <motion.div
@@ -65,110 +88,111 @@ const TimelineControls: React.FC<TimelineControlsProps> = ({
       className="fixed bottom-0 inset-x-0 p-4 pointer-events-none z-50"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
     >
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto flex flex-row items-center justify-center gap-4">
         {/* Music controls */}
-        <div
-          className={`flex items-center gap-2 p-3 rounded-2xl backdrop-blur-lg ${bgColor} pointer-events-auto touch-feedback`}
-        >
-          <button
-            onClick={onPreviousTrack}
-            className={`p-2 rounded-xl ${hoverBgColor} ${textColor} transition-colors mobile-button`}
+        {showMusicControls !== false && (
+          <div
+            className={`flex items-center gap-2 p-2 rounded-2xl ${bgColor} pointer-events-auto touch-feedback border border-current/20`}
           >
-            <ChevronLeftIcon className="w-5 h-5" />
-          </button>
+            <div className="flex items-center">
+              <button
+                onClick={onPreviousTrack}
+                className={`flex items-center justify-center ${hoverBgColor} ${textColor} transition-colors`}
+              >
+                <span className="text-lg">‹</span>
+              </button>
 
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            className={`p-2 rounded-xl ${hoverBgColor} ${textColor} transition-colors mobile-button`}
-          >
-            {isPlaying ? (
-              <PauseIcon className="w-5 h-5" />
-            ) : (
-              <PlayIcon className="w-5 h-5" />
-            )}
-          </button>
+              <button
+                onClick={() => setIsPlaying(!isPlaying)}
+                className={`flex items-center justify-center ${hoverBgColor} ${textColor} transition-colors mx-1`}
+              >
+                <span className="text-lg">{isPlaying ? "❚❚" : "▶"}</span>
+              </button>
 
-          <button
-            onClick={onNextTrack}
-            className={`p-2 rounded-xl ${hoverBgColor} ${textColor} transition-colors mobile-button`}
-          >
-            <ChevronRightIcon className="w-5 h-5" />
-          </button>
+              <button
+                onClick={onNextTrack}
+                className={`flex items-center justify-center ${hoverBgColor} ${textColor} transition-colors`}
+              >
+                <span className="text-lg">›</span>
+              </button>
+            </div>
 
-          <div className="w-px h-6 bg-current opacity-20 mx-2 hidden md:block" />
+            <div className="w-px h-4 bg-current opacity-20 mx-1.5 hidden md:block" />
 
-          <button
-            onClick={() => setVolume(volume === 0 ? 0.5 : 0)}
-            className={`p-2 rounded-xl ${hoverBgColor} ${textColor} transition-colors mobile-button hidden md:block`}
-          >
-            {volume === 0 ? (
-              <SpeakerXMarkIcon className="w-5 h-5" />
-            ) : (
-              <SpeakerWaveIcon className="w-5 h-5" />
-            )}
-          </button>
+            <div className="hidden md:flex items-center">
+              <button
+                onClick={() => setVolume(volume === 0 ? 0.5 : 0)}
+                className={`flex items-center justify-center ${hoverBgColor} ${textColor} transition-colors`}
+              >
+                <span className="text-lg">{volume === 0 ? "○" : "●"}</span>
+              </button>
 
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={volume}
-            onChange={(e) => setVolume(parseFloat(e.target.value))}
-            className="w-20 accent-current hidden md:block"
-          />
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="w-16 accent-current mx-2"
+              />
 
-          <div className="ml-2 hidden md:block">
-            <p className={`text-sm font-medium ${textColor}`}>{currentTrack}</p>
+              <span className={`text-xs font-medium ${textColor}`}>
+                {currentTrack}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Simple month navigation */}
+        {/* Month/Gallery navigation */}
         {currentMonth && (
           <div
-            className={`flex items-center gap-2 p-3 rounded-2xl backdrop-blur-lg ${bgColor} pointer-events-auto touch-feedback`}
+            className={`flex items-center gap-2 p-2 rounded-2xl ${bgColor} pointer-events-auto touch-feedback border border-current/20`}
           >
-            <button
-              onClick={onPreviousMonth}
-              disabled={!showPreviousMonth}
-              className={`p-2 rounded-xl ${hoverBgColor} ${textColor} transition-colors mobile-button disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <ChevronLeftIcon className="w-5 h-5" />
-            </button>
-            <span className={`text-sm font-medium ${textColor}`}>
-              {currentMonth}
-            </span>
-            <button
-              onClick={onNextMonth}
-              disabled={!showNextMonth}
-              className={`p-2 rounded-xl ${hoverBgColor} ${textColor} transition-colors mobile-button disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <ChevronRightIcon className="w-5 h-5" />
-            </button>
+            <div className="flex items-center">
+              <button
+                onClick={onPreviousMonth}
+                disabled={!showPreviousMonth}
+                className={`flex items-center justify-center ${hoverBgColor} ${textColor} transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <span className="text-lg">‹</span>
+              </button>
+
+              <span className={`text-xs font-medium ${textColor} mx-2`}>
+                {getAbbreviatedMonth(isGalleryView ? "Gallery" : currentMonth)}
+              </span>
+
+              <button
+                onClick={onNextMonth}
+                disabled={!showNextMonth}
+                className={`flex items-center justify-center ${hoverBgColor} ${textColor} transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <span className="text-lg">›</span>
+              </button>
+            </div>
           </div>
         )}
 
         {/* Auto-highlight controls */}
-        <div
-          className={`flex items-center gap-2 p-3 rounded-2xl backdrop-blur-lg ${bgColor} pointer-events-auto touch-feedback`}
-        >
-          <button
-            onClick={() => setIsAutoHighlighting(!isAutoHighlighting)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl ${hoverBgColor} ${textColor} transition-colors`}
-          >
-            {isAutoHighlighting ? (
-              <>
-                <PauseCircleIcon className={`w-5 h-5 ${highlightColor}`} />
-                <span className="text-sm font-medium">Pause Highlights</span>
-              </>
-            ) : (
-              <>
-                <PlayCircleIcon className={`w-5 h-5 ${highlightColor}`} />
-                <span className="text-sm font-medium">Auto Highlight</span>
-              </>
-            )}
-          </button>
-        </div>
+        {showAutoHighlight &&
+          isAutoHighlighting !== undefined &&
+          setIsAutoHighlighting && (
+            <div
+              className={`flex items-center gap-2 p-2 rounded-2xl ${bgColor} pointer-events-auto touch-feedback border border-current/20`}
+            >
+              <div className="flex items-center">
+                <button
+                  onClick={() => setIsAutoHighlighting(!isAutoHighlighting)}
+                  className={`flex items-center justify-center ${hoverBgColor} ${textColor} transition-colors`}
+                >
+                  <span className="text-lg">
+                    {isAutoHighlighting ? "❚❚" : "▶"}
+                  </span>
+                  <span className="text-xs font-medium ml-2">Auto</span>
+                </button>
+              </div>
+            </div>
+          )}
       </div>
     </motion.div>
   );

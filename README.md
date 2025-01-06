@@ -6,63 +6,98 @@ Memory Flow is an interactive gift experience that lets you share your year's mo
 
 ### Key Features
 
-- **Password-Protected Experiences**: Each gift experience is private and accessible only with a password
-- **Immersive Storytelling**: Photos flow naturally through an automated story mode with manual controls
-- **Monthly Collections**: Photos are beautifully arranged in monthly collages
-- **Grand Finale**: A stunning year-end collage that captures all moments
-- **Theme Options**: Choose between Space and Zen Garden themes, each with unique animations
-- **Gift Creation**: Recipients can create their own gift experiences to share
-- **Decentralized Storage**: Uses IPFS/Pinata for secure, decentralized photo storage
+- **Private Gift Experiences**: Each gift experience is securely stored using Pinata's Files API
+- **Interactive Timeline**: Navigate through memories with intuitive timeline controls
+  - Auto-highlighting feature with pause/resume functionality
+  - Smooth transitions between months and gallery view
+  - Manual navigation with previous/next month controls
+- **Monthly Collections**: Photos beautifully arranged in monthly collages with:
+  - Automatic date organization
+  - Smooth animations and transitions
+  - Responsive grid layouts
+- **Gallery View**: A stunning year-end collage that captures all moments
+  - Accessible through timeline navigation
+  - Grid layout optimized for viewing all photos
+  - Disables auto-highlighting for manual browsing
+- **Theme Options**: Choose between Space and Zen Garden themes, each with:
+  - Unique animations and visual effects
+  - Custom background elements
+  - Theme-specific color schemes and transitions
+- **Music Controls**:
+  - Play/pause background music
+  - Volume control
+  - Track selection with previous/next controls
+- **Upload Progress**:
+  - Detailed status messages for each stage
+  - Clear progress indicators
+  - User-friendly notifications
 
 ## Technical Implementation
 
 - Built with [Next.js](https://nextjs.org/) for seamless user experience
 - Styled with [Tailwind CSS](https://tailwindcss.com/) for beautiful, responsive design
 - Uses [Framer Motion](https://www.framer.com/motion/) for smooth animations
-- Implements [IPFS](https://ipfs.tech/) via [Pinata](https://www.pinata.cloud/) for decentralized storage
 - Features [Three.js](https://threejs.org/) for immersive 3D backgrounds
+- Implements React hooks for efficient state management
+- Uses memoization for optimized performance
+
+## Storage Architecture
+
+### Private Content (User Gifts)
+
+- Uses Pinata's Files API for secure, private storage
+- Each gift has a unique identifier
+- Content includes:
+  - Photos with metadata (date taken, description)
+  - Theme configuration
+  - Gift metadata
+
+### Demo Content
+
+- Pre-configured demo gifts for each theme
+- Accessible through environment variables
+- Showcases full functionality without user upload
+
+## Gift Creation Flow
+
+1. **Theme Selection**
+
+   - Choose between Space and Zen Garden themes
+   - Preview theme-specific animations
+
+2. **Photo Upload**
+
+   - Drag-and-drop interface
+   - Automatic date extraction
+   - Progress tracking with detailed status messages
+
+3. **Gift Organization**
+
+   - Automatic monthly grouping
+   - Preview timeline functionality
+   - Gallery view arrangement
+
+4. **Gift Sharing**
+
+   - Generate unique gift ID
+   - Copy or download sharing link
+   - Optional download of all content
+
+5. **Gift Viewing**
+   - Enter gift ID to unwrap
+   - Interactive timeline navigation
+   - Auto-highlighting with manual controls
 
 ## Project Structure
 
-- `components/`: Reusable UI components including timelines and collages
-- `contexts/`: React context providers for theme and auth state
-- `hooks/`: Custom React hooks for shared functionality
+- `components/`: Reusable UI components
+  - `timeline/`: Timeline and navigation components
+  - `themes/`: Theme-specific components and effects
+  - `ui/`: Common UI elements
+- `contexts/`: React context providers
+- `hooks/`: Custom React hooks
 - `pages/`: Next.js pages and API routes
-- `utils/`: Utility functions and helpers
-- `styles/`: Global styles and Tailwind configuration
-
-## Development Roadmap
-
-### Phase 1 - Core Experience (Current)
-
-- [x] Basic timeline implementation
-- [x] Theme switching (Space/Zen)
-- [x] Photo navigation and viewing
-- [x] Monthly collages
-- [x] Animation and transitions
-
-### Phase 2 - Gift Creation (In Progress)
-
-- [ ] Password protection system
-- [ ] Photo upload and IPFS integration
-- [ ] Creation wizard interface
-- [ ] Theme customization
-- [ ] Message personalization
-
-### Phase 3 - Enhancement
-
-- [ ] Advanced collage layouts
-- [ ] Additional themes
-- [ ] Sharing mechanisms
-- [ ] Mobile optimization
-- [ ] Analytics integration
-
-### Phase 4 - Monetization
-
-- [ ] Payment integration
-- [ ] Subscription/pricing models
-- [ ] Premium features
-- [ ] Gift vouchers
+- `utils/`: Utility functions and types
 
 ## Getting Started
 
@@ -73,16 +108,15 @@ Memory Flow is an interactive gift experience that lets you share your year's mo
    ```
 3. Set up environment variables:
    ```env
+   NEXT_PUBLIC_PINATA_JWT=your_jwt_token
    NEXT_PUBLIC_PINATA_GATEWAY=your_gateway_url
+   NEXT_PUBLIC_SPACE_DEMO_ID=your_space_demo_id
+   NEXT_PUBLIC_JAPANESE_DEMO_ID=your_japanese_demo_id
    ```
 4. Run the development server:
    ```bash
    npm run dev
    ```
-
-## Contributing
-
-Contributions are welcome! Please read our contributing guidelines for details.
 
 ## License
 

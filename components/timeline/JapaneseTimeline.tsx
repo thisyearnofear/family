@@ -1,19 +1,27 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  SetStateAction,
+} from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import useSound from "use-sound";
+import dynamic from "next/dynamic";
 import TimelineControls from "./TimelineControls";
 import MonthlyView from "./MonthlyView";
-import dynamic from "next/dynamic";
 import type { ImageProps } from "@utils/types/types";
+import JapaneseIntro from "../themes/JapaneseIntro";
 
-const JapaneseIntro = dynamic(() => import("../themes/JapaneseIntro"), {
-  ssr: false,
-});
 const ZenBackground = dynamic(() => import("../themes/ZenBackground"), {
   ssr: false,
 });
 
 interface JapaneseTimelineProps {
   images: ImageProps[];
+  messages: string[];
+  music: string[];
+  title?: string;
   isAutoHighlighting: boolean;
   setIsAutoHighlighting: (value: boolean) => void;
 }
@@ -26,10 +34,6 @@ interface LoadingState {
   };
 }
 
-interface JapaneseIntroProps {
-  onComplete: () => void;
-}
-
 interface MonthData {
   key: string;
   month: string;
@@ -37,29 +41,47 @@ interface MonthData {
   startIndex: number;
 }
 
-const SONGS = [
-  { path: "/sounds/background-music.mp3", title: "Hopes and Dreams" },
-  { path: "/sounds/grow-old.mp3", title: "Grow Old Together" },
-  { path: "/sounds/mama.mp3", title: "Mamamayako" },
-  { path: "/sounds/baba.mp3", title: "Baba, I Understand" },
-];
+const HIGHLIGHT_INTERVAL = 5000; // 5 seconds per photo highlight
 
-const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({
+// Add type for song object
+interface Song {
+  path: string;
+  title: string;
+}
+
+export default function JapaneseTimeline({
   images,
+  messages,
+  music,
+  title,
   isAutoHighlighting,
   setIsAutoHighlighting,
-}) => {
+}: JapaneseTimelineProps) {
   console.log("JapaneseTimeline Component Mounted", {
     imagesCount: images?.length,
+    messageCount: messages?.length,
+    musicCount: music?.length,
+    title,
   });
 
   const [showIntro, setShowIntro] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [volume, setVolume] = useState(0.5);
-  const [hasCompletedFirstView, setHasCompletedFirstView] = useState(false);
-  const [currentSongIndex, setCurrentSongIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(true);
+  const [volume, setVolume] = useState<number>(0.5);
+  const [currentSongIndex, setCurrentSongIndex] = useState<number>(0);
   const [loadingStates, setLoadingStates] = useState<LoadingState>({});
+
+  // Filter available songs based on user selection
+  const availableSongs = useMemo<Song[]>(() => {
+    return music.map((path) => ({
+      path,
+      title:
+        path
+          .split("/")
+          .pop()
+          ?.replace(/\.[^/.]+$/, "") || "Unknown",
+    }));
+  }, [music]);
 
   useEffect(() => {
     console.log("JapaneseTimeline Effect Running", {
@@ -104,6 +126,14 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({
       currentStartIndex++;
     });
 
+    // Add gallery as final stage
+    months.push({
+      key: "gallery",
+      month: "Gallery",
+      images: sortedImages,
+      startIndex: currentStartIndex,
+    });
+
     return months;
   }, [images]);
 
@@ -125,43 +155,54 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({
   }, [nextMonth, loadingStates]);
 
   // Sound setup with proper cleanup
-  const [play, { pause, sound }] = useSound(SONGS[currentSongIndex].path, {
-    volume,
-    loop: false,
-    interrupt: true,
-    html5: true,
-    onend: () => {
-      // When song ends naturally, move to next song
-      if (isPlaying) {
-        setCurrentSongIndex((prev) => (prev + 1) % SONGS.length);
-      }
-    },
-  });
+  const [play, { pause, sound }] = useSound(
+    availableSongs[currentSongIndex]?.path || "",
+    {
+      volume,
+      loop: false,
+      interrupt: true,
+      html5: true,
+      onend: () => {
+        // When song ends naturally, move to next song
+        if (isPlaying && availableSongs.length > 0) {
+          setCurrentSongIndex(
+            (prev: number) => (prev + 1) % availableSongs.length
+          );
+        }
+      },
+    }
+  );
 
   // Keep track of current sound instance
   useEffect(() => {
+    // Only cleanup when component unmounts or sound changes
     return () => {
-      // Cleanup previous sound when unmounting or changing songs
       if (sound) {
         sound.unload();
       }
     };
-  }, [sound]);
+  }, [sound]); // Add sound to dependencies
 
-  // Handle song changes
+  // Handle song changes with respect to available songs
   const handleNextTrack = useCallback(() => {
     if (sound) {
-      sound.unload(); // Properly unload the current sound
+      sound.stop();
     }
-    setCurrentSongIndex((prev) => (prev + 1) % SONGS.length);
-  }, [sound]);
+    setCurrentSongIndex((prev: number) => {
+      if (availableSongs.length === 0) return prev;
+      return (prev + 1) % availableSongs.length;
+    });
+  }, [sound, availableSongs]);
 
   const handlePreviousTrack = useCallback(() => {
     if (sound) {
-      sound.unload(); // Properly unload the current sound
+      sound.stop();
     }
-    setCurrentSongIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
-  }, [sound]);
+    setCurrentSongIndex((prev: number) => {
+      if (availableSongs.length === 0) return prev;
+      return (prev - 1 + availableSongs.length) % availableSongs.length;
+    });
+  }, [sound, availableSongs]);
 
   // Handle play/pause
   useEffect(() => {
@@ -174,7 +215,9 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({
     }
 
     return () => {
-      sound.pause();
+      if (sound && !isPlaying) {
+        sound.pause();
+      }
     };
   }, [isPlaying, sound]);
 
@@ -185,39 +228,71 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({
     }
   }, [volume, sound]);
 
-  // Auto-advance timer
+  // Start auto-highlighting when intro ends
   useEffect(() => {
-    if (!isPlaying || showIntro) return;
+    if (!showIntro) {
+      setIsAutoHighlighting(true);
+    }
+  }, [showIntro, setIsAutoHighlighting]);
+
+  // Handle auto-highlighting timer
+  useEffect(() => {
+    if (!isPlaying || showIntro || !isAutoHighlighting) return;
+
+    // Don't auto-highlight in gallery view
+    const isGalleryView = currentMonthIndex === monthlyData.length - 1;
+    if (isGalleryView) {
+      setIsAutoHighlighting(false);
+      return;
+    }
 
     const timer = setInterval(() => {
       setCurrentIndex((prev) => {
-        if (prev >= images.length - 1) {
-          setIsPlaying(false);
-          return images.length - 1; // Ensure we stay at the last image
+        const currentMonthImages = currentMonth?.images || [];
+        const currentImageIndex = prev - (currentMonth?.startIndex || 0);
+
+        if (currentImageIndex >= currentMonthImages.length - 1) {
+          // At the end of current month
+          if (currentMonthIndex === monthlyData.length - 2) {
+            // About to enter gallery, disable auto-highlighting
+            requestAnimationFrame(() => setIsAutoHighlighting(false));
+            return monthlyData[monthlyData.length - 1].startIndex;
+          }
+          // Move to next month
+          return nextMonth?.startIndex || prev;
         }
+        // Move to next image in current month
         return prev + 1;
       });
-    }, 5000);
+    }, HIGHLIGHT_INTERVAL);
 
     return () => clearInterval(timer);
-  }, [isPlaying, showIntro, images.length]);
-
-  // Handle intro completion
-  const handleIntroComplete = useCallback(() => {
-    setShowIntro(false);
-    setHasCompletedFirstView(true);
-  }, []);
+  }, [
+    isPlaying,
+    showIntro,
+    isAutoHighlighting,
+    currentMonth,
+    currentMonthIndex,
+    monthlyData,
+    nextMonth,
+    setIsAutoHighlighting,
+  ]);
 
   // Handle month navigation
   const handleNextMonth = useCallback(() => {
     if (currentMonthIndex === monthlyData.length - 1) {
-      // If we're at the last month, go to the last image
-      setCurrentIndex(images.length - 1);
+      // Already at gallery, stay there
       return;
     }
     if (!nextMonth) return;
+
+    // If moving to gallery, disable auto-highlighting
+    if (currentMonthIndex === monthlyData.length - 2) {
+      setIsAutoHighlighting(false);
+    }
+
     setCurrentIndex(nextMonth.startIndex);
-  }, [nextMonth, currentMonthIndex, monthlyData.length, images.length]);
+  }, [currentMonthIndex, monthlyData.length, nextMonth, setIsAutoHighlighting]);
 
   const handlePreviousMonth = useCallback(() => {
     const prevMonthIndex = currentMonthIndex - 1;
@@ -225,8 +300,75 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({
     setCurrentIndex(monthlyData[prevMonthIndex].startIndex);
   }, [currentMonthIndex, monthlyData]);
 
+  // Handle image click
+  const handleImageClick = useCallback(
+    (index: number) => {
+      setCurrentIndex(index);
+
+      // Check if clicking into gallery view
+      const targetMonth = monthlyData.find(
+        (month) =>
+          index >= month.startIndex &&
+          index < month.startIndex + month.images.length
+      );
+
+      if (targetMonth?.key === "gallery") {
+        setIsAutoHighlighting(false);
+      }
+    },
+    [monthlyData, setIsAutoHighlighting]
+  );
+
+  // Memoize the loading states setter
+  const handleLoadingStatesChange = useCallback(
+    (newLoadingStates: SetStateAction<LoadingState>) => {
+      setLoadingStates(newLoadingStates);
+    },
+    []
+  );
+
+  // Add isGalleryView calculation
+  const isGalleryView = currentMonthIndex === monthlyData.length - 1;
+
+  // Memoize MonthlyView props
+  const monthlyViewProps = useMemo(
+    () => ({
+      images,
+      currentIndex,
+      onImageClick: handleImageClick,
+      theme: "japanese" as const,
+      loadingStates,
+      setLoadingStates: handleLoadingStatesChange,
+      isAutoHighlighting,
+      isGalleryStage: isGalleryView,
+      title,
+    }),
+    [
+      images,
+      currentIndex,
+      handleImageClick,
+      loadingStates,
+      handleLoadingStatesChange,
+      isAutoHighlighting,
+      isGalleryView,
+      title,
+    ]
+  );
+
+  // Memoize MonthlyView to prevent unnecessary remounts
+  const memoizedMonthlyView = useMemo(
+    () => <MonthlyView {...monthlyViewProps} />,
+    [monthlyViewProps]
+  );
+
   if (showIntro) {
-    return <JapaneseIntro onComplete={handleIntroComplete} />;
+    console.log("🎌 Rendering JapaneseIntro with messages:", messages);
+    return (
+      <JapaneseIntro
+        onComplete={() => setShowIntro(false)}
+        messages={messages}
+      />
+    );
   }
 
   return (
@@ -236,40 +378,35 @@ const JapaneseTimeline: React.FC<JapaneseTimelineProps> = ({
 
       {/* Content layer */}
       <div className="relative" style={{ zIndex: 1 }}>
-        <MonthlyView
-          images={images}
-          currentIndex={currentIndex}
-          onImageClick={setCurrentIndex}
-          theme="japanese"
-          loadingStates={loadingStates}
-          setLoadingStates={setLoadingStates}
-          isAutoHighlighting={isAutoHighlighting}
-          setIsAutoHighlighting={setIsAutoHighlighting}
-        />
+        {memoizedMonthlyView}
       </div>
 
       {/* Controls layer - only shown after intro */}
-      <TimelineControls
-        theme="japanese"
-        isPlaying={isPlaying}
-        setIsPlaying={setIsPlaying}
-        volume={volume}
-        setVolume={setVolume}
-        currentTrack={`"${SONGS[currentSongIndex].title}" by Papa`}
-        firstView={!hasCompletedFirstView}
-        nextMonthLoadingProgress={nextMonthLoadingProgress}
-        onNextTrack={handleNextTrack}
-        onPreviousTrack={handlePreviousTrack}
-        currentMonth={currentMonth?.month}
-        onNextMonth={handleNextMonth}
-        onPreviousMonth={handlePreviousMonth}
-        showNextMonth={!!nextMonth && !loadingStates[nextMonth.key]?.isLoading}
-        showPreviousMonth={currentMonthIndex > 0}
-        isAutoHighlighting={isAutoHighlighting}
-        setIsAutoHighlighting={setIsAutoHighlighting}
-      />
+      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center items-center p-4">
+        <TimelineControls
+          theme="japanese"
+          isPlaying={isPlaying}
+          setIsPlaying={setIsPlaying}
+          volume={volume}
+          setVolume={setVolume}
+          currentTrack={availableSongs[currentSongIndex]?.title || "No music"}
+          firstView={showIntro}
+          nextMonthLoadingProgress={nextMonthLoadingProgress}
+          onNextTrack={handleNextTrack}
+          onPreviousTrack={handlePreviousTrack}
+          currentMonth={currentMonth?.month}
+          onNextMonth={handleNextMonth}
+          onPreviousMonth={handlePreviousMonth}
+          showNextMonth={
+            !!nextMonth && !loadingStates[nextMonth.key]?.isLoading
+          }
+          showPreviousMonth={currentMonthIndex > 0}
+          isAutoHighlighting={isAutoHighlighting}
+          setIsAutoHighlighting={setIsAutoHighlighting}
+          showAutoHighlight={!isGalleryView}
+          showMusicControls={availableSongs.length > 0}
+        />
+      </div>
     </div>
   );
-};
-
-export default JapaneseTimeline;
+}

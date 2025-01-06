@@ -1,13 +1,24 @@
-import { useRef, useEffect, useState, useCallback, useMemo } from "react";
+import {
+  useRef,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  SetStateAction,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import useSound from "use-sound";
 import * as THREE from "three";
 import MonthlyView from "./MonthlyView";
 import TimelineControls from "./TimelineControls";
 import type { ImageProps } from "@utils/types/types";
+import SpaceIntro from "../themes/SpaceIntro";
 
 interface SpaceTimelineProps {
   images: ImageProps[];
+  messages: string[];
+  music: string[];
+  title?: string;
   isAutoHighlighting: boolean;
   setIsAutoHighlighting: (value: boolean) => void;
 }
@@ -34,13 +45,20 @@ const SONGS = [
   { path: "/sounds/baba.mp3", title: "Baba, I Understand" },
 ];
 
-const SpaceTimeline: React.FC<SpaceTimelineProps> = ({
+const HIGHLIGHT_INTERVAL = 5000; // 5 seconds per photo highlight
+
+export default function SpaceTimeline({
   images,
+  messages,
+  music,
+  title,
   isAutoHighlighting,
   setIsAutoHighlighting,
-}) => {
+}: SpaceTimelineProps) {
   console.log("SpaceTimeline Component Mounted", {
     imagesCount: images?.length,
+    messageCount: messages?.length,
+    musicCount: music?.length,
   });
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -98,6 +116,14 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({
       currentStartIndex++;
     });
 
+    // Add gallery as final stage
+    months.push({
+      key: "gallery",
+      month: "Gallery",
+      images: sortedImages,
+      startIndex: currentStartIndex,
+    });
+
     return months;
   }, [images]);
 
@@ -118,12 +144,15 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({
     return Math.round((loadedCount / totalCount) * 100);
   }, [nextMonth, loadingStates]);
 
-  const introTexts = [
-    "Family is constant — gravity's centre, anchor in the cosmos.",
-    "Every memory, an imprint of love, laughter, togetherness: etched in the universe.",
-    "Connection transcends distance, time, space: stars bound-unbreakable constellation.",
-    "Love is infinite. Happiness innate. Seeing, believing ....",
-  ];
+  const introTexts =
+    messages.length > 0
+      ? messages
+      : [
+          "Family is constant — gravity's centre, anchor in the cosmos.",
+          "Every memory, an imprint of love, laughter, togetherness: etched in the universe.",
+          "Connection transcends distance, time, space: stars bound-unbreakable constellation.",
+          "Love is infinite. Happiness innate. Seeing, believing ....",
+        ];
 
   // Sound setup with proper cleanup
   const [play, { pause, sound }] = useSound(SONGS[currentSongIndex].path, {
@@ -142,24 +171,24 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({
   // Keep track of current sound instance
   useEffect(() => {
     return () => {
-      // Cleanup previous sound when unmounting or changing songs
+      // Only cleanup when component unmounts or sound changes
       if (sound) {
         sound.unload();
       }
     };
-  }, [sound]);
+  }, [sound]); // Add sound to dependencies
 
   // Handle song changes
   const handleNextTrack = useCallback(() => {
     if (sound) {
-      sound.unload(); // Properly unload the current sound
+      sound.stop(); // Just stop instead of unloading
     }
     setCurrentSongIndex((prev) => (prev + 1) % SONGS.length);
   }, [sound]);
 
   const handlePreviousTrack = useCallback(() => {
     if (sound) {
-      sound.unload(); // Properly unload the current sound
+      sound.stop(); // Just stop instead of unloading
     }
     setCurrentSongIndex((prev) => (prev - 1 + SONGS.length) % SONGS.length);
   }, [sound]);
@@ -175,7 +204,9 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({
     }
 
     return () => {
-      sound.pause();
+      if (sound && !isPlaying) {
+        sound.pause();
+      }
     };
   }, [isPlaying, sound]);
 
@@ -186,22 +217,55 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({
     }
   }, [volume, sound]);
 
-  // Auto-advance timer
+  // Start auto-highlighting when intro ends
   useEffect(() => {
-    if (!isPlaying || showIntro) return;
+    if (!showIntro) {
+      setIsAutoHighlighting(true);
+    }
+  }, [showIntro, setIsAutoHighlighting]);
+
+  // Handle auto-highlighting timer
+  useEffect(() => {
+    if (!isPlaying || showIntro || !isAutoHighlighting) return;
+
+    // Don't auto-highlight in gallery view
+    const isGalleryView = currentMonthIndex === monthlyData.length - 1;
+    if (isGalleryView) {
+      setIsAutoHighlighting(false);
+      return;
+    }
 
     const timer = setInterval(() => {
       setCurrentIndex((prev) => {
-        if (prev >= images.length - 1) {
-          setIsPlaying(false);
-          return images.length - 1; // Ensure we stay at the last image
+        const currentMonthImages = currentMonth?.images || [];
+        const currentImageIndex = prev - (currentMonth?.startIndex || 0);
+
+        if (currentImageIndex >= currentMonthImages.length - 1) {
+          // At the end of current month
+          if (currentMonthIndex === monthlyData.length - 2) {
+            // About to enter gallery, disable auto-highlighting
+            requestAnimationFrame(() => setIsAutoHighlighting(false));
+            return monthlyData[monthlyData.length - 1].startIndex;
+          }
+          // Move to next month
+          return nextMonth?.startIndex || prev;
         }
+        // Move to next image in current month
         return prev + 1;
       });
-    }, 5000);
+    }, HIGHLIGHT_INTERVAL);
 
     return () => clearInterval(timer);
-  }, [isPlaying, showIntro, images.length]);
+  }, [
+    isPlaying,
+    showIntro,
+    isAutoHighlighting,
+    currentMonth,
+    currentMonthIndex,
+    monthlyData,
+    nextMonth,
+    setIsAutoHighlighting,
+  ]);
 
   // ThreeJS setup and animation
   useEffect(() => {
@@ -325,19 +389,84 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({
   // Handle month navigation
   const handleNextMonth = useCallback(() => {
     if (currentMonthIndex === monthlyData.length - 1) {
-      // If we're at the last month, go to the last image
-      setCurrentIndex(images.length - 1);
+      // Already at gallery, stay there
       return;
     }
     if (!nextMonth) return;
+
+    // If moving to gallery, disable auto-highlighting
+    if (currentMonthIndex === monthlyData.length - 2) {
+      setIsAutoHighlighting(false);
+    }
+
     setCurrentIndex(nextMonth.startIndex);
-  }, [nextMonth, currentMonthIndex, monthlyData.length, images.length]);
+  }, [currentMonthIndex, monthlyData.length, nextMonth, setIsAutoHighlighting]);
 
   const handlePreviousMonth = useCallback(() => {
     const prevMonthIndex = currentMonthIndex - 1;
     if (prevMonthIndex < 0) return;
     setCurrentIndex(monthlyData[prevMonthIndex].startIndex);
   }, [currentMonthIndex, monthlyData]);
+
+  // Handle image click
+  const handleImageClick = useCallback(
+    (index: number) => {
+      setCurrentIndex(index);
+
+      // Check if clicking into gallery view
+      const targetMonth = monthlyData.find(
+        (month) =>
+          index >= month.startIndex &&
+          index < month.startIndex + month.images.length
+      );
+
+      if (targetMonth?.key === "gallery") {
+        setIsAutoHighlighting(false);
+      }
+    },
+    [monthlyData, setIsAutoHighlighting]
+  );
+
+  // Memoize the loading states setter
+  const handleLoadingStatesChange = useCallback(
+    (newLoadingStates: SetStateAction<LoadingState>) => {
+      setLoadingStates(newLoadingStates);
+    },
+    []
+  );
+
+  // Add isGalleryView calculation before the return statement
+  const isGalleryView = currentMonthIndex === monthlyData.length - 1;
+
+  // Memoize MonthlyView props
+  const monthlyViewProps = useMemo(
+    () => ({
+      images,
+      currentIndex,
+      onImageClick: handleImageClick,
+      theme: "space" as const,
+      loadingStates,
+      setLoadingStates: handleLoadingStatesChange,
+      isAutoHighlighting,
+      isGalleryStage: isGalleryView,
+    }),
+    [
+      images,
+      currentIndex,
+      handleImageClick,
+      loadingStates,
+      handleLoadingStatesChange,
+      isAutoHighlighting,
+      isGalleryView,
+    ]
+  );
+
+  if (showIntro) {
+    console.log("🚀 Rendering SpaceIntro with messages:", messages);
+    return (
+      <SpaceIntro onComplete={() => setShowIntro(false)} messages={messages} />
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black overflow-hidden">
@@ -350,66 +479,32 @@ const SpaceTimeline: React.FC<SpaceTimelineProps> = ({
 
       {/* Content layer */}
       <div className="relative" style={{ zIndex: 1 }}>
-        {showIntro ? (
-          <div
-            className="fixed inset-0 flex items-center justify-center"
-            style={{ zIndex: 2 }}
-          >
-            <motion.div
-              key={currentTextIndex}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 1 }}
-              className="text-center px-4 max-w-4xl mx-auto"
-            >
-              <div className="bg-black/50 backdrop-blur-sm rounded-lg py-8 px-6 border border-blue-500/30">
-                <p className="text-3xl md:text-4xl text-white font-bold">
-                  {introTexts[currentTextIndex]}
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        ) : (
-          <>
-            <MonthlyView
-              images={images}
-              currentIndex={currentIndex}
-              onImageClick={setCurrentIndex}
-              theme="space"
-              loadingStates={loadingStates}
-              setLoadingStates={setLoadingStates}
-              isAutoHighlighting={isAutoHighlighting}
-              setIsAutoHighlighting={setIsAutoHighlighting}
-            />
+        <MonthlyView {...monthlyViewProps} />
 
-            {/* Controls layer - only shown after intro */}
-            <TimelineControls
-              theme="space"
-              isPlaying={isPlaying}
-              setIsPlaying={setIsPlaying}
-              volume={volume}
-              setVolume={setVolume}
-              currentTrack={`"${SONGS[currentSongIndex].title}" by Papa`}
-              firstView={showIntro}
-              nextMonthLoadingProgress={nextMonthLoadingProgress}
-              onNextTrack={handleNextTrack}
-              onPreviousTrack={handlePreviousTrack}
-              currentMonth={currentMonth?.month}
-              onNextMonth={handleNextMonth}
-              onPreviousMonth={handlePreviousMonth}
-              showNextMonth={
-                !!nextMonth && !loadingStates[nextMonth.key]?.isLoading
-              }
-              showPreviousMonth={currentMonthIndex > 0}
-              isAutoHighlighting={isAutoHighlighting}
-              setIsAutoHighlighting={setIsAutoHighlighting}
-            />
-          </>
-        )}
+        {/* Controls layer - only shown after intro */}
+        <TimelineControls
+          theme="space"
+          isPlaying={isPlaying}
+          setIsPlaying={setIsPlaying}
+          volume={volume}
+          setVolume={setVolume}
+          currentTrack={`"${SONGS[currentSongIndex].title}" by Papa`}
+          firstView={showIntro}
+          nextMonthLoadingProgress={nextMonthLoadingProgress}
+          onNextTrack={handleNextTrack}
+          onPreviousTrack={handlePreviousTrack}
+          currentMonth={currentMonth?.month}
+          onNextMonth={handleNextMonth}
+          onPreviousMonth={handlePreviousMonth}
+          showNextMonth={
+            !!nextMonth && !loadingStates[nextMonth.key]?.isLoading
+          }
+          showPreviousMonth={currentMonthIndex > 0}
+          isAutoHighlighting={isAutoHighlighting}
+          setIsAutoHighlighting={setIsAutoHighlighting}
+          showAutoHighlight={!isGalleryView}
+        />
       </div>
     </div>
   );
-};
-
-export default SpaceTimeline;
+}

@@ -1,132 +1,302 @@
-import { PinataSDK as PinataIPFS } from "pinata-web3";
-import { PinataSDK as PinataFiles, type FileListResponse } from "pinata";
-import type {
-  ImageProps,
-  PinataResponse,
-  PinJSONOptions,
-  PinataListResponse,
-  UploadResult,
-} from "../../types/types";
+import type { ImageProps } from "../../types/types";
 
-const PINATA_JWT = process.env.PINATA_JWT || process.env.NEXT_PUBLIC_PINATA_JWT;
+// Environment variables
+const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || process.env.PINATA_JWT;
 const PINATA_GATEWAY = process.env.NEXT_PUBLIC_PINATA_GATEWAY;
 
-// Initialize SDKs with error handling
-function initializePinataSDKs() {
-  if (!PINATA_JWT || !PINATA_GATEWAY) {
-    console.error("Pinata Configuration Missing:", {
-      NODE_ENV: process.env.NODE_ENV,
-      VERCEL_ENV: process.env.VERCEL_ENV,
-      NETLIFY_ENV: process.env.NETLIFY_ENV,
-      NETLIFY: process.env.NETLIFY,
-      PINATA_JWT: !!PINATA_JWT, // Log only boolean for security
-      PINATA_GROUP_ID: process.env.PINATA_GROUP_ID,
-      NEXT_PUBLIC_PINATA_GATEWAY: PINATA_GATEWAY,
-    });
-    return null;
-  }
-
-  try {
-    // Initialize IPFS SDK for public content
-    const ipfs = new PinataIPFS({
-      pinataJwt: PINATA_JWT,
-      pinataGateway: PINATA_GATEWAY,
-    });
-
-    // Initialize Files SDK for private content
-    const files = new PinataFiles({
-      pinataJwt: PINATA_JWT,
-      pinataGateway: PINATA_GATEWAY,
-    });
-
-    return { ipfs, files };
-  } catch (error) {
-    console.error("Failed to initialize Pinata SDKs:", error);
-    return null;
-  }
+if (!PINATA_JWT || !PINATA_GATEWAY) {
+  throw new Error("Missing Pinata configuration");
 }
 
-const pinata = initializePinataSDKs();
-
-/**
- * Creates a new private group for organizing user photos
- */
-export async function createGroup(name: string, description?: string) {
-  if (!pinata?.files) {
-    throw new Error("Pinata Files SDK not initialized");
-  }
-
-  try {
-    const group = await pinata.files.groups.create({
-      name,
-      isPublic: false,
-    });
-    return group;
-  } catch (error) {
-    console.error("Error creating group:", error);
-    throw new Error("Failed to create group");
-  }
+interface GiftMetadata {
+  theme: "space" | "japanese";
+  images: ImageProps[];
+  messages: string[];
+  music: string[];
+  createdAt: string;
+  title?: string;
 }
 
 /**
- * Uploads multiple photos to Pinata Files API (private)
+ * Creates a new gift by pinning metadata and images to IPFS
  */
-export async function uploadPhotos(
+export async function createGift(
   files: File[],
-  groupId: string
-): Promise<UploadResult[]> {
-  if (!pinata?.files) {
-    throw new Error("Pinata Files SDK not initialized");
-  }
-
-  const uploadedPhotos: UploadResult[] = [];
-
-  // Process files in parallel with a concurrency limit
-  const batchSize = 3;
-  for (let i = 0; i < files.length; i += batchSize) {
-    const batch = files.slice(i, i + batchSize);
-    const uploadPromises = batch.map(async (file) => {
-      try {
-        // Extract metadata from file
-        const metadata = await extractFileMetadata(file);
-
-        // Upload file
-        const upload = await pinata.files.upload.file(file);
-
-        // Add to group
-        await pinata.files.groups.addFiles({
-          groupId,
-          files: [upload.id],
-        });
-
-        return {
-          id: uploadedPhotos.length,
-          ipfsHash: upload.cid,
-          name: metadata.name,
-          description: null,
-          dateTaken: metadata.dateTaken || new Date().toISOString(),
-          dateModified: new Date().toISOString(),
-          width: 1280, // Default width
-          height: 720, // Default height
-          groupId,
-        };
-      } catch (error) {
-        console.error(`Error uploading file ${file.name}:`, error);
-        throw new Error(`Failed to upload ${file.name}`);
-      }
+  theme: "space" | "japanese",
+  messages: string[] = [],
+  music: string[] = [],
+  title?: string,
+  customDates?: { [filename: string]: string }
+): Promise<{
+  giftId: string;
+  fileCount: number;
+  status: "ready" | "pending";
+  pendingCids?: string[];
+}> {
+  try {
+    console.log("📦 Creating gift with:", {
+      fileCount: files.length,
+      theme,
+      messageCount: messages.length,
+      musicCount: music.length,
+      title,
+      customDates,
     });
 
-    const results = await Promise.all(uploadPromises);
-    uploadedPhotos.push(...results);
+    // Generate a unique gift ID
+    const giftId = `gift-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    console.log("📦 Gift ID:", giftId);
+
+    // Upload images to IPFS
+    console.log("🖼️ Uploading images to IPFS...");
+    const uploadedImages = await Promise.all(
+      files.map(async (file, index) => {
+        try {
+          console.log(
+            `📤 Uploading image ${index + 1}/${files.length}: ${file.name}...`
+          );
+
+          // Create form data
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append(
+            "pinataMetadata",
+            JSON.stringify({
+              name: file.name,
+              keyvalues: {
+                giftId,
+                type: "image",
+                index: index.toString(),
+                dateTaken:
+                  customDates?.[file.name] ||
+                  new Date(file.lastModified).toISOString(),
+              },
+            })
+          );
+
+          // Upload to API endpoint
+          const response = await fetch("/api/pinata/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error(`Upload failed: ${response.statusText}`);
+          }
+
+          const result = await response.json();
+          console.log(
+            `✅ Uploaded image ${index + 1}/${files.length}:`,
+            file.name,
+            result.IpfsHash
+          );
+
+          return {
+            id: index + 1,
+            name: file.name,
+            description: `Photo taken on ${new Date(
+              customDates?.[file.name] || file.lastModified
+            ).toLocaleDateString()}`,
+            ipfsHash: result.IpfsHash,
+            dateTaken:
+              customDates?.[file.name] ||
+              new Date(file.lastModified).toISOString(),
+            width: 1280, // Default width
+            height: 720, // Default height
+            url: `${PINATA_GATEWAY}/ipfs/${result.IpfsHash}`,
+          };
+        } catch (error) {
+          console.error(
+            `❌ Failed to upload image ${index + 1}/${files.length}:`,
+            file.name,
+            error
+          );
+          throw error;
+        }
+      })
+    );
+
+    // Create and upload the gift metadata
+    console.log("📄 Creating gift metadata...");
+    const giftData: GiftMetadata = {
+      theme,
+      images: uploadedImages,
+      messages,
+      music,
+      createdAt: new Date().toISOString(),
+      title,
+    };
+
+    console.log("📄 Uploading gift metadata to IPFS...");
+    const formData = new FormData();
+    formData.append(
+      "file",
+      new Blob([JSON.stringify(giftData)], { type: "application/json" })
+    );
+    formData.append(
+      "pinataMetadata",
+      JSON.stringify({
+        name: `${giftId}-metadata`,
+        keyvalues: {
+          giftId,
+          type: "metadata",
+        },
+      })
+    );
+
+    const metadataResponse = await fetch("/api/pinata/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!metadataResponse.ok) {
+      throw new Error(
+        `Failed to upload metadata: ${metadataResponse.statusText}`
+      );
+    }
+
+    const metadataUpload = await metadataResponse.json();
+    const metadataCid = metadataUpload.IpfsHash;
+
+    // Wait for files to be processed
+    console.log("⏳ Waiting for files to be processed...");
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+
+    // Verify all files are properly pinned
+    const allCids = [...uploadedImages.map((img) => img.ipfsHash), metadataCid];
+    const verificationResult = await verifyGiftFiles(giftId, allCids);
+
+    if (!verificationResult.isComplete) {
+      console.warn(
+        "⚠️ Some files are still processing:",
+        verificationResult.missingCids
+      );
+      return {
+        giftId,
+        fileCount: files.length + 1,
+        status: "pending",
+        pendingCids: verificationResult.missingCids,
+      };
+    }
+
+    console.log("🎁 Gift created successfully! Gift ID:", giftId);
+    return {
+      giftId,
+      fileCount: files.length + 1,
+      status: "ready",
+    };
+  } catch (error) {
+    console.error("❌ Error creating gift:", error);
+    throw error;
+  }
+}
+
+/**
+ * Verifies that all files for a gift are properly pinned
+ */
+async function verifyGiftFiles(giftId: string, expectedCids: string[]) {
+  // Find all files for this gift
+  const response = await fetch(`/api/pinata/list?giftId=${giftId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to verify files: ${response.statusText}`);
   }
 
-  return uploadedPhotos;
+  const data = await response.json();
+  const foundCids = data.rows.map((row: any) => row.ipfs_pin_hash);
+  const missingCids = expectedCids.filter((cid) => !foundCids.includes(cid));
+
+  return {
+    isComplete: missingCids.length === 0,
+    missingCids,
+    foundCids,
+  };
+}
+
+export interface GiftData {
+  images: ImageProps[];
+  theme: "space" | "japanese";
+  messages?: string[];
+  music?: string[];
+  title?: string;
+}
+
+export async function getImages({
+  groupId,
+  hasFiles = true,
+  hasIpfs = false,
+  isDemo = false,
+}: {
+  groupId: string;
+  hasFiles?: boolean;
+  hasIpfs?: boolean;
+  isDemo?: boolean;
+}): Promise<GiftData> {
+  try {
+    console.log("🎁 Unwrapping gift:", { groupId });
+
+    // Find all files for this gift
+    console.log("📂 Fetching gift files...");
+    const response = await fetch(`/api/pinata/list?giftId=${groupId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch gift files: ${response.statusText}`);
+    }
+
+    const giftFiles = await response.json();
+
+    // Find metadata file
+    const metadataFile = giftFiles.rows.find((file: any) => {
+      const keyvalues = file.metadata?.keyvalues;
+      return (
+        typeof keyvalues === "object" &&
+        keyvalues !== null &&
+        keyvalues["type"] === "metadata"
+      );
+    });
+
+    if (!metadataFile) {
+      throw new Error(
+        "Gift metadata not found. Please try again in a few moments."
+      );
+    }
+
+    // Fetch metadata content using our API endpoint
+    console.log("📄 Fetching metadata:", metadataFile.ipfs_pin_hash);
+    const metadata = await getMetadata(metadataFile.ipfs_pin_hash);
+
+    console.log("📦 Raw metadata:", JSON.stringify(metadata, null, 2));
+    console.log("📝 Messages from metadata:", metadata.messages);
+
+    console.log("📦 Retrieved gift data:", {
+      theme: metadata.theme,
+      imageCount: metadata.images?.length,
+      messageCount: metadata.messages?.length,
+      musicCount: metadata.music?.length,
+      messages: metadata.messages,
+    });
+
+    // Ensure all image URLs use the current gateway
+    metadata.images = metadata.images.map((img: ImageProps) => ({
+      ...img,
+      url: `/api/pinata/image?cid=${img.ipfsHash}`,
+    }));
+
+    return {
+      images: metadata.images,
+      theme: metadata.theme || "space",
+      messages: metadata.messages,
+      music: metadata.music,
+      title: metadata.title,
+    };
+  } catch (error) {
+    console.error("❌ Error getting images:", error);
+    throw error;
+  }
 }
 
 /**
  * Extracts metadata from a file
  */
-async function extractFileMetadata(
+export async function extractFileMetadata(
   file: File
 ): Promise<{ dateTaken?: string; name: string }> {
   // Try to get date from filename first (format: YYYY-MM-DD-*.*)
@@ -138,164 +308,24 @@ async function extractFileMetadata(
     };
   }
 
-  // Try to get EXIF data if it's a JPEG
-  if (file.type === "image/jpeg") {
-    try {
-      // Here we would use EXIF reader library
-      // For now, just use the file's last modified date
-      return {
-        dateTaken: new Date(file.lastModified).toISOString(),
-        name: file.name,
-      };
-    } catch (error) {
-      console.warn("Failed to read EXIF data:", error);
-    }
-  }
-
   return {
     dateTaken: new Date(file.lastModified).toISOString(),
     name: file.name,
   };
 }
 
-/**
- * Retrieves images by group ID from Pinata
- * If isDemo is true, uses IPFS API for public content
- */
-export async function getImages(
-  groupId: string,
-  isDemo = false
-): Promise<ImageProps[]> {
-  if (!pinata) {
-    console.error("Pinata SDKs not initialized");
-    return [];
-  }
-
+export const getMetadata = async (cid: string) => {
   try {
-    if (isDemo) {
-      if (!pinata.ipfs) {
-        throw new Error("Pinata IPFS SDK not initialized");
-      }
+    const response = await fetch(`/api/pinata/metadata?cid=${cid}`);
 
-      // For demo content, use IPFS API
-      const response = await pinata.ipfs.groups.get({ groupId });
-      if (!response) {
-        throw new Error(`Group not found: ${groupId}`);
-      }
-
-      const files = Array.isArray(response) ? response : [response];
-      return files.map((file: any, index: number) => ({
-        id: index,
-        ipfsHash: file.IpfsHash,
-        name: file.name || `Image ${index + 1}`,
-        description: null,
-        dateTaken: file.metadata?.keyValues?.dateTaken || file.createdAt,
-        dateModified: file.updatedAt,
-        width: 1280,
-        height: 720,
-        groupId,
-      }));
-    } else {
-      if (!pinata.files) {
-        throw new Error("Pinata Files SDK not initialized");
-      }
-
-      // For user content, use Files API
-      const group = await pinata.files.groups.get({ groupId });
-      if (!group) {
-        throw new Error(`Group not found: ${groupId}`);
-      }
-
-      // Get files in the group
-      const response = await pinata.files.files.list();
-      const groupFiles = response.files.filter(
-        (file) => file.group_id === groupId
-      );
-
-      return groupFiles.map((file, index) => ({
-        id: index,
-        ipfsHash: file.cid,
-        name: file.name || `Image ${index + 1}`,
-        description: null,
-        dateTaken: file.created_at,
-        dateModified: file.created_at,
-        width: 1280,
-        height: 720,
-        groupId: file.group_id || groupId,
-      }));
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  } catch (error) {
-    console.error("Error fetching images:", error);
-    return [];
-  }
-}
 
-/**
- * Updates the date taken for multiple photos (private content only)
- */
-export async function updatePhotosDates(
-  photos: { ipfsHash: string; dateTaken: string }[]
-): Promise<void> {
-  if (!pinata?.files) {
-    throw new Error("Pinata Files SDK not initialized");
-  }
-
-  try {
-    for (const photo of photos) {
-      await pinata.files.files.update({
-        id: photo.ipfsHash,
-        name: photo.ipfsHash, // Keep the same name
-        keyvalues: {
-          dateTaken: photo.dateTaken,
-        },
-      });
-    }
-  } catch (error) {
-    console.error("Error updating photo dates:", error);
-    throw new Error("Failed to update photo dates");
-  }
-}
-
-/**
- * Pins a JSON object to IPFS (public content)
- */
-export async function pinJSONToIPFS(
-  jsonData: any,
-  options?: PinJSONOptions
-): Promise<PinataResponse> {
-  if (!pinata?.ipfs) {
-    throw new Error("Pinata IPFS SDK not initialized");
-  }
-
-  try {
-    const upload = await pinata.ipfs.upload.json(jsonData, {
-      metadata: options?.pinataMetadata,
-    });
-
-    return {
-      IpfsHash: upload.IpfsHash,
-      PinSize: 0, // Size information not available in new SDK
-      Timestamp: new Date().toISOString(),
-    };
-  } catch (error) {
-    console.error("Error pinning JSON to IPFS:", error);
-    throw new Error("Failed to pin JSON to IPFS");
-  }
-}
-
-/**
- * Retrieves a JSON object from IPFS (public content)
- */
-export async function getJSONFromIPFS(ipfsHash: string): Promise<any> {
-  if (!pinata?.ipfs) {
-    throw new Error("Pinata IPFS SDK not initialized");
-  }
-
-  try {
-    const data = await pinata.ipfs.gateways.get(ipfsHash);
+    const data = await response.json();
     return data;
   } catch (error) {
-    console.error("Error fetching JSON from IPFS:", error);
-    throw new Error("Failed to fetch JSON from IPFS");
+    console.error("❌ Error fetching metadata:", error);
+    throw error;
   }
-}
+};

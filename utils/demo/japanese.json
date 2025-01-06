@@ -1,0 +1,25 @@
+{
+    "theme": "japanese",
+    "images": [
+        {
+            "id": 0,
+            "name": "Japanese Demo 1",
+            "description": "A beautiful Japanese memory",
+            "ipfsHash": "QmXyNMvx9j1tQS8j8qVrL1fNkF4i6GQTX6mLnH8fvUNHL",
+            "dateTaken": "2024-01-01T00:00:00.000Z",
+            "width": 1280,
+            "height": 720,
+            "url": "https://gateway.pinata.cloud/ipfs/QmXyNMvx9j1tQS8j8qVrL1fNkF4i6GQTX6mLnH8fvUNHL"
+        },
+        {
+            "id": 1,
+            "name": "Japanese Demo 2",
+            "description": "Another Japanese memory",
+            "ipfsHash": "QmYyNMvx9j1tQS8j8qVrL1fNkF4i6GQTX6mLnH8fvUNHL",
+            "dateTaken": "2024-01-02T00:00:00.000Z",
+            "width": 1280,
+            "height": 720,
+            "url": "https://gateway.pinata.cloud/ipfs/QmYyNMvx9j1tQS8j8qVrL1fNkF4i6GQTX6mLnH8fvUNHL"
+        }
+    ]
+}

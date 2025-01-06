@@ -40,7 +40,7 @@ export default function Carousel({
         onClick={closeModal}
       >
         <Image
-          src={currentPhoto.blurDataUrl || defaultBlurDataUrl}
+          src={currentPhoto.url || defaultBlurDataUrl}
           className="pointer-events-none h-full w-full"
           alt="blurred background"
           fill
