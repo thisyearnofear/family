@@ -29,8 +29,8 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
   },
   env: {
-    PINATA_JWT: process.env.PINATA_JWT,
-    PINATA_GROUP_ID: process.env.PINATA_GROUP_ID,
+    NEXT_PUBLIC_SPACE_DEMO_ID: process.env.SPACE_DEMO_ID,
+    NEXT_PUBLIC_JAPANESE_DEMO_ID: process.env.JAPANESE_DEMO_ID,
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",

@@ -46,39 +46,12 @@ export interface PinataFile {
   size: number;
   number_of_files: number;
   mime_type: string;
-  group_id: string | null;
   created_at: string;
 }
 
 export interface PinataListResponse {
   files: PinataFile[];
   next_page_token?: string;
-}
-
-// Group response types
-export interface GroupFile {
-  id: string;
-  name: string | null;
-  cid: string;
-  size: number;
-  groupId: string | null;
-  createdAt: string;
-  updatedAt: string;
-  metadata?: {
-    keyValues?: {
-      dateTaken?: string;
-      [key: string]: any;
-    };
-  };
-}
-
-export interface GroupResponseItem {
-  id: string;
-  name: string;
-  items: GroupFile[];
-  total: number;
-  pageSize: number;
-  pageNumber: number;
 }
 
 // Upload types
@@ -91,7 +64,6 @@ export interface UploadResult {
   dateTaken?: string;
   dateModified?: string;
   description: string | null;
-  groupId?: string;
 }
 
 // Gift types
@@ -100,7 +72,6 @@ export interface Gift {
   theme: "space" | "japanese";
   messages: string[];
   photos: ImageProps[];
-  groupId: string;
   createdAt: string;
   musicPreference?: {
     volume: number;
@@ -113,7 +84,6 @@ export interface CreateGiftParams {
   theme: "space" | "japanese";
   messages: string[];
   photos: ImageProps[];
-  groupId: string;
   musicPreference?: {
     volume: number;
     isPlaying: boolean;
@@ -143,7 +113,6 @@ export interface FileListResponse {
     name: string | null;
     cid: string;
     size: number;
-    groupId: string | null;
     createdAt: string;
     updatedAt: string;
     metadata?: {

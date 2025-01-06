@@ -1,20 +1,32 @@
 import type { ImageProps } from "../../types/types";
 
-// Environment variables
-const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || process.env.PINATA_JWT;
-const PINATA_GATEWAY = process.env.NEXT_PUBLIC_PINATA_GATEWAY;
+let pinataGateway: string | null = null;
+let pinataJwt: string | null = null;
 
-if (!PINATA_JWT || !PINATA_GATEWAY) {
-  throw new Error("Missing Pinata configuration");
+// Function to get Pinata configuration
+async function getPinataConfig() {
+  if (!pinataGateway) {
+    const response = await fetch("/api/pinata/config");
+    if (!response.ok) {
+      throw new Error("Failed to get Pinata configuration");
+    }
+    const config = await response.json();
+    pinataGateway = config.gateway;
+  }
+  return { gateway: pinataGateway };
 }
 
-interface GiftMetadata {
-  theme: "space" | "japanese";
-  images: ImageProps[];
-  messages: string[];
-  music: string[];
-  createdAt: string;
-  title?: string;
+// Function to get Pinata JWT
+async function getPinataJwt() {
+  if (!pinataJwt) {
+    const response = await fetch("/api/pinata/jwt");
+    if (!response.ok) {
+      throw new Error("Failed to get Pinata JWT");
+    }
+    const { jwt } = await response.json();
+    pinataJwt = jwt;
+  }
+  return pinataJwt;
 }
 
 /**
@@ -43,6 +55,9 @@ export async function createGift(
       customDates,
     });
 
+    // Get Pinata configuration
+    const { gateway } = await getPinataConfig();
+
     // Generate a unique gift ID
     const giftId = `gift-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     console.log("📦 Gift ID:", giftId);
@@ -60,17 +75,15 @@ export async function createGift(
           const formData = new FormData();
           formData.append("file", file);
           formData.append(
-            "pinataMetadata",
+            "metadata",
             JSON.stringify({
               name: file.name,
-              keyvalues: {
-                giftId,
-                type: "image",
-                index: index.toString(),
-                dateTaken:
-                  customDates?.[file.name] ||
-                  new Date(file.lastModified).toISOString(),
-              },
+              giftId,
+              type: "image",
+              index: index.toString(),
+              dateTaken:
+                customDates?.[file.name] ||
+                new Date(file.lastModified).toISOString(),
             })
           );
 
@@ -103,7 +116,7 @@ export async function createGift(
               new Date(file.lastModified).toISOString(),
             width: 1280, // Default width
             height: 720, // Default height
-            url: `${PINATA_GATEWAY}/ipfs/${result.IpfsHash}`,
+            url: `${gateway}/ipfs/${result.IpfsHash}`,
           };
         } catch (error) {
           console.error(
@@ -118,7 +131,7 @@ export async function createGift(
 
     // Create and upload the gift metadata
     console.log("📄 Creating gift metadata...");
-    const giftData: GiftMetadata = {
+    const giftData = {
       theme,
       images: uploadedImages,
       messages,
@@ -134,13 +147,11 @@ export async function createGift(
       new Blob([JSON.stringify(giftData)], { type: "application/json" })
     );
     formData.append(
-      "pinataMetadata",
+      "metadata",
       JSON.stringify({
         name: `${giftId}-metadata`,
-        keyvalues: {
-          giftId,
-          type: "metadata",
-        },
+        giftId,
+        type: "metadata",
       })
     );
 
@@ -233,6 +244,9 @@ export async function getImages({
 }): Promise<GiftData> {
   try {
     console.log("🎁 Unwrapping gift:", { groupId });
+
+    // Get Pinata configuration
+    const { gateway } = await getPinataConfig();
 
     // Find all files for this gift
     console.log("📂 Fetching gift files...");

@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { PinataClient } from "../../scripts/pinata-client";
 
-const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || process.env.PINATA_JWT;
 const PINATA_GATEWAY = process.env.NEXT_PUBLIC_PINATA_GATEWAY;
 
-if (!PINATA_JWT || !PINATA_GATEWAY) {
-  throw new Error("Missing Pinata configuration");
+if (!PINATA_GATEWAY) {
+  throw new Error("Missing Pinata Gateway configuration");
 }
 
-// Now we know these are defined
-const pinataJwt: string = PINATA_JWT;
+// Now we know this is defined
 const pinataGateway: string = PINATA_GATEWAY;
 
 interface VerifyGiftProps {
@@ -25,11 +23,19 @@ export function VerifyGift({ giftId, onVerified, onError }: VerifyGiftProps) {
   const [progress, setProgress] = useState({ found: 0, total: 0 });
 
   useEffect(() => {
-    const pinata = new PinataClient(pinataJwt, pinataGateway);
     let checkInterval: NodeJS.Timeout;
 
     const verifyGift = async () => {
       try {
+        // Get the JWT from our API
+        const jwtResponse = await fetch("/api/pinata/jwt");
+        if (!jwtResponse.ok) {
+          throw new Error("Failed to get Pinata JWT");
+        }
+        const { jwt } = await jwtResponse.json();
+
+        const pinata = new PinataClient(jwt, pinataGateway);
+
         // Find all files for this gift
         const giftFiles = await pinata.pinList({
           metadata: {

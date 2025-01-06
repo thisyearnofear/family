@@ -108,11 +108,12 @@ Memory Flow is an interactive gift experience that lets you share your year's mo
    ```
 3. Set up environment variables:
    ```env
-   NEXT_PUBLIC_PINATA_JWT=your_jwt_token
+   PINATA_JWT=your_jwt_token
    NEXT_PUBLIC_PINATA_GATEWAY=your_gateway_url
    NEXT_PUBLIC_SPACE_DEMO_ID=your_space_demo_id
    NEXT_PUBLIC_JAPANESE_DEMO_ID=your_japanese_demo_id
    ```
+   Note: The Pinata JWT is now served securely through an API endpoint and should not be exposed to the client.
 4. Run the development server:
    ```bash
    npm run dev
