@@ -2,8 +2,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@contexts/ThemeContext";
 import { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/router";
 import { getImages } from "@utils/api/pinata";
 import type { ImageProps } from "@utils/types/types";
+import { SONGS } from "@utils/constants";
 
 interface WelcomeScreenProps {
   onCreateGift: () => void;
@@ -74,6 +76,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onCreateGift,
   onUnwrapGift,
 }) => {
+  const router = useRouter();
   const { setTheme } = useTheme();
   const [giftId, setGiftId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -100,22 +103,25 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         groupId: demoId,
         hasFiles: false,
         hasIpfs: false,
-        isDemo: false,
+        isDemo: true,
       });
 
       if (!images || images.length === 0) {
         throw new Error("No demo images found");
       }
 
+      const demoMusic = theme === "space" ? [SONGS[0].path] : [SONGS[2].path];
+
       console.log("🚀 Demo content loaded:", {
         imageCount: images.length,
         messageCount: messages?.length,
-        musicCount: music?.length,
+        musicCount: demoMusic.length,
+        music: demoMusic,
       });
 
       // Set theme and transition to gift experience
       setTheme(theme);
-      onUnwrapGift(images, demoId, theme, messages, music);
+      onUnwrapGift(images, demoId, theme, messages, demoMusic);
     } catch (error) {
       console.error("❌ Error loading demo:", error);
       setError("Failed to load demo experience");
@@ -160,6 +166,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     }
   };
 
+  const handleEdit = (giftId: string) => {
+    if (!giftId.trim()) return;
+    router.push(`/edit/${giftId.trim()}`);
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -184,11 +195,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           >
             <div className="text-center mb-12">
               <h1 className="text-5xl md:text-7xl font-['Playfair_Display'] text-gray-800/90 mb-4">
-                FamilyWrapped
+                Famile.xyz
               </h1>
               <p className="text-base md:text-lg text-gray-600/90 max-w-sm mx-auto font-['Lora'] leading-relaxed">
-                Another year in the books <br /> Collage family memories <br />
-                Relive precious moments
+                Deepen bonds <br /> Treasure memories <br />
+                Share moments
               </p>
             </div>
 
@@ -220,28 +231,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               </motion.button>
             </div>
 
-            {/* Create Gift Section */}
-            <motion.div
-              className="bg-gradient-to-r from-blue-500/70 to-purple-500/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg mb-8 text-white"
-              whileHover={{ scale: 1.02 }}
-              transition={{ duration: 0.2 }}
-            >
-              <h2 className="text-2xl text-center font-['Lora'] mb-3">
-                Create Memory
-              </h2>
-              <p className="text-sm mb-4 text-center text-white/90 font-['Lora']">
-                Add photos, write messages, share love.
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onCreateGift}
-                className="w-full px-4 py-3 bg-white/90 text-blue-600 rounded-xl hover:bg-white transition-colors duration-300 font-['Lora']"
-              >
-                Start →
-              </motion.button>
-            </motion.div>
-
             {/* Gift ID Section */}
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg mb-12">
               <h2 className="text-2xl text-center font-['Lora'] text-gray-800/90 mb-2">
@@ -260,51 +249,53 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                   className="w-full px-4 py-3 mb-4 text-center bg-white/80 border border-gray-200 rounded-xl text-gray-800/90 placeholder:text-gray-400/90 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-transparent font-['Lora']"
                 />
                 {giftId && (
-                  <motion.button
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setGiftId("");
-                      setError(null);
-                    }}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 min-h-0 min-w-0 p-2"
-                  >
-                    ×
-                  </motion.button>
+                  <div className="flex gap-2">
+                    <motion.button
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleUnwrapGift(giftId)}
+                      disabled={isLoading}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {isLoading ? "Unwrapping..." : "Unwrap Gift"}
+                    </motion.button>
+                    <motion.button
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleEdit(giftId)}
+                      disabled={isLoading}
+                      className="px-4 py-2 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50"
+                    >
+                      Edit
+                    </motion.button>
+                  </div>
                 )}
               </div>
 
               {error && (
-                <div
-                  className={`mb-4 p-3 rounded-lg text-sm font-['Lora'] ${
-                    error.startsWith("Looking")
-                      ? "bg-blue-50 border border-blue-200 text-blue-600/90"
-                      : "bg-red-50 border border-red-200 text-red-600/90"
-                  }`}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-red-500 text-sm text-center mt-2"
                 >
                   {error}
-                </div>
+                </motion.p>
               )}
-
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                disabled={!giftId.trim() || isLoading}
-                className="w-full px-4 py-3 bg-gray-800/90 text-white rounded-xl hover:bg-gray-700 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-['Lora']"
-                onClick={() => handleUnwrapGift(giftId)}
-              >
-                {isLoading ? (
-                  <>
-                    <span className="animate-spin">⏳</span>
-                    <span>Unwrapping...</span>
-                  </>
-                ) : (
-                  "Unwrap"
-                )}
-              </motion.button>
             </div>
+
+            {/* Create Gift Button */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onCreateGift}
+              className="w-full py-3 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors mb-12"
+            >
+              Create New Gift
+            </motion.button>
 
             {/* Social Icons */}
             <div className="flex justify-center items-center gap-6 pb-8">

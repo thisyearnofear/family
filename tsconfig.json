@@ -18,12 +18,21 @@
       "@/*": ["./*"],
       "@utils/*": ["utils/*"],
       "@components/*": ["components/*"],
-      "@contexts/*": ["contexts/*"]
+      "@contexts/*": ["contexts/*"],
+      "@hooks/*": ["hooks/*"]
     },
     "typeRoots": ["./node_modules/@types", "./types"],
     "baseUrl": ".",
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "outDir": "dist"
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types/**/*.d.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "types/**/*.d.ts",
+    "scripts/**/*",
+    "utils/**/*"
+  ],
   "exclude": ["node_modules"]
 }

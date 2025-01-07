@@ -25,17 +25,29 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
   const MAX_RETRIES = 3;
 
   // Construct the full URL for the image
-  const imageUrl = image.ipfsHash.startsWith("http")
-    ? image.ipfsHash
-    : `https://gateway.pinata.cloud/ipfs/${image.ipfsHash}`;
+  const imageUrl =
+    image.url ||
+    (image.ipfsHash
+      ? image.ipfsHash.startsWith("http")
+        ? image.ipfsHash
+        : `/api/pinata/image?cid=${image.ipfsHash}`
+      : null);
+
+  if (!imageUrl) {
+    console.error("No valid image URL found:", image);
+    return null;
+  }
 
   // Auto-retry logic
   useEffect(() => {
     if (isError && retryCount < MAX_RETRIES) {
-      const timer = setTimeout(() => {
-        setIsError(false);
-        setRetryCount((prev) => prev + 1);
-      }, 2000 * (retryCount + 1)); // Exponential backoff
+      const timer = setTimeout(
+        () => {
+          setIsError(false);
+          setRetryCount((prev) => prev + 1);
+        },
+        2000 * (retryCount + 1)
+      ); // Exponential backoff
 
       return () => clearTimeout(timer);
     }

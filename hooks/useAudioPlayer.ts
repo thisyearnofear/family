@@ -1,56 +1,89 @@
 import { useState, useEffect, useCallback } from "react";
+import useSound from "use-sound";
+import { SONGS, type Song } from "../utils/constants";
 
-export function useAudioPlayer() {
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentPlayingSong, setCurrentPlayingSong] = useState<string | null>(
-    null
-  );
+interface AudioPlayerState {
+  isPlaying: boolean;
+  currentSongIndex: number;
+}
 
-  useEffect(() => {
-    // Cleanup on unmount
-    return () => {
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
-    };
-  }, [audio]);
+interface AudioPlayerHook {
+  isPlaying: boolean;
+  currentPlayingSong: string;
+  togglePlaySong: (songPath?: string) => void;
+}
 
-  const togglePlaySong = useCallback(
-    (songPath: string) => {
-      if (audio) {
-        if (currentPlayingSong === songPath) {
-          if (isPlaying) {
-            audio.pause();
-            setIsPlaying(false);
-          } else {
-            audio.play();
-            setIsPlaying(true);
-          }
-        } else {
-          audio.pause();
-          audio.currentTime = 0;
-          const newAudio = new Audio(songPath);
-          newAudio.play();
-          setAudio(newAudio);
-          setCurrentPlayingSong(songPath);
-          setIsPlaying(true);
-        }
-      } else {
-        const newAudio = new Audio(songPath);
-        newAudio.play();
-        setAudio(newAudio);
-        setCurrentPlayingSong(songPath);
-        setIsPlaying(true);
+export function useAudioPlayer(): AudioPlayerHook {
+  const [state, setState] = useState<AudioPlayerState>({
+    isPlaying: false,
+    currentSongIndex: 0,
+  });
+
+  const [play, { stop, sound }] = useSound(SONGS[state.currentSongIndex].path, {
+    volume: 0.5,
+    interrupt: true,
+    onend: () => {
+      // When song ends naturally, move to next song
+      if (state.isPlaying) {
+        setState((prev) => ({
+          ...prev,
+          currentSongIndex: (prev.currentSongIndex + 1) % SONGS.length,
+        }));
       }
     },
-    [audio, currentPlayingSong, isPlaying]
+  });
+
+  // Keep track of current sound instance
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unload();
+      }
+    };
+  }, [sound]);
+
+  const togglePlaySong = useCallback(
+    (songPath?: string) => {
+      if (songPath) {
+        const songIndex = SONGS.findIndex(
+          (song: Song) => song.path === songPath
+        );
+        if (songIndex !== -1) {
+          if (sound) {
+            sound.stop();
+          }
+          setState((prev) => ({
+            currentSongIndex: songIndex,
+            isPlaying: true,
+          }));
+        }
+      } else {
+        setState((prev) => ({ ...prev, isPlaying: !prev.isPlaying }));
+      }
+    },
+    [sound]
   );
 
+  // Handle play/pause
+  useEffect(() => {
+    if (!sound) return;
+
+    if (state.isPlaying) {
+      sound.play();
+    } else {
+      sound.pause();
+    }
+
+    return () => {
+      if (sound && !state.isPlaying) {
+        sound.pause();
+      }
+    };
+  }, [state.isPlaying, sound]);
+
   return {
-    isPlaying,
-    currentPlayingSong,
+    isPlaying: state.isPlaying,
+    currentPlayingSong: SONGS[state.currentSongIndex].path,
     togglePlaySong,
   };
 }

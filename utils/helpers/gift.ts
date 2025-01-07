@@ -42,15 +42,15 @@ export function createGiftData(
  * Downloads gift ID information as a text file
  */
 export function downloadGiftInfo(giftId: string, theme: "space" | "japanese") {
-  const giftInfo = `FamilyWrapped Gift ID
+  const giftInfo = `Famile Memory Gift
 
 Your Gift ID: ${giftId}
 
 Important:
-• Keep this ID safe - you'll need it to share your gift
+• Keep this ID safe - you'll need it to share your memory
 • Your photos are stored privately and securely
-• Only people with this ID can view your gift
-• The gift will be shown in ${theme} theme
+• Only people with this ID can view your memory
+• The memory will be shown in ${theme} theme
 
 Created on: ${new Date().toLocaleString()}`;
 
@@ -58,7 +58,7 @@ Created on: ${new Date().toLocaleString()}`;
   const downloadUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = downloadUrl;
-  link.download = `familywrapped-gift-${giftId}.txt`;
+  link.download = `famile-memory-${giftId}.txt`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

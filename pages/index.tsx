@@ -2,46 +2,47 @@ import { useState, useEffect } from "react";
 import type { NextPage } from "next";
 import dynamic from "next/dynamic";
 import type { ImageProps } from "@utils/types/types";
+import type { CreateGiftData } from "@utils/types/gift";
 
 // Dynamically import components
-const WelcomeScreen = dynamic(() => import("@components/ui/WelcomeScreen"), {
-  ssr: false,
-});
+const WelcomeScreen = dynamic(
+  () => import("@components/ui/WelcomeScreen").then((mod) => mod.default),
+  {
+    ssr: false,
+  }
+);
 
-const CreateGiftFlow = dynamic<{
-  onComplete: (data: {
-    theme: "space" | "japanese";
-    messages: string[];
-    photos: ImageProps[];
-    giftId: string;
-    title?: string;
-  }) => Promise<void>;
-  onClose: () => void;
-  onGiftCreated: (giftId: string) => void;
-}>(() => import("@components/ui/CreateGiftFlow"), {
-  ssr: false,
-});
+const CreateGiftFlow = dynamic(
+  () => import("@components/ui/CreateGiftFlow").then((mod) => mod.default),
+  {
+    ssr: false,
+  }
+);
 
-const SpaceIntro = dynamic(() => import("@components/themes/SpaceIntro"), {
-  ssr: false,
-});
+const SpaceIntro = dynamic(
+  () => import("@components/themes/SpaceIntro").then((mod) => mod.default),
+  {
+    ssr: false,
+  }
+);
 
 const JapaneseIntro = dynamic(
-  () => import("@components/themes/JapaneseIntro"),
+  () => import("@components/themes/JapaneseIntro").then((mod) => mod.default),
   {
     ssr: false,
   }
 );
 
 const SpaceTimeline = dynamic(
-  () => import("@components/timeline/SpaceTimeline"),
+  () => import("@components/timeline/SpaceTimeline").then((mod) => mod.default),
   {
     ssr: false,
   }
 );
 
 const JapaneseTimeline = dynamic(
-  () => import("@components/timeline/JapaneseTimeline"),
+  () =>
+    import("@components/timeline/JapaneseTimeline").then((mod) => mod.default),
   {
     ssr: false,
   }
@@ -78,13 +79,7 @@ const Home: NextPage = () => {
     setShowWelcome(false);
   };
 
-  const handleGiftComplete = async (data: {
-    theme: "space" | "japanese";
-    messages: string[];
-    photos: ImageProps[];
-    giftId: string;
-    title?: string;
-  }) => {
+  const handleGiftComplete = async (data: CreateGiftData) => {
     // Reset state and return to welcome screen
     setGiftId(null);
     setImages([]);

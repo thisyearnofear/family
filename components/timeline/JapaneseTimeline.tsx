@@ -112,9 +112,7 @@ export default function JapaneseTimeline({
 
       const lastMonth = months[months.length - 1];
       if (lastMonth && lastMonth.key === monthKey) {
-        if (lastMonth.images.length < 10) {
-          lastMonth.images.push(image);
-        }
+        lastMonth.images.push(image);
       } else {
         months.push({
           key: monthKey,

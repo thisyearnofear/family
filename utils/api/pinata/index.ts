@@ -38,7 +38,13 @@ export async function createGift(
   messages: string[] = [],
   music: string[] = [],
   title?: string,
-  customDates?: { [filename: string]: string }
+  customDates?: { [filename: string]: string },
+  owner?: string,
+  onProgress?: (status: {
+    uploadedFiles: number;
+    totalFiles: number;
+    status: "uploading" | "verifying" | "pending" | "ready";
+  }) => void
 ): Promise<{
   giftId: string;
   fileCount: number;
@@ -53,6 +59,7 @@ export async function createGift(
       musicCount: music.length,
       title,
       customDates,
+      owner,
     });
 
     // Get Pinata configuration
@@ -64,6 +71,7 @@ export async function createGift(
 
     // Upload images to IPFS
     console.log("🖼️ Uploading images to IPFS...");
+    let uploadedCount = 0;
     const uploadedImages = await Promise.all(
       files.map(async (file, index) => {
         try {
@@ -98,10 +106,17 @@ export async function createGift(
           }
 
           const result = await response.json();
+          uploadedCount++;
+          onProgress?.({
+            uploadedFiles: uploadedCount,
+            totalFiles: files.length,
+            status: "uploading",
+          });
+
           console.log(
             `✅ Uploaded image ${index + 1}/${files.length}:`,
             file.name,
-            result.IpfsHash
+            result.ipfsHash
           );
 
           return {
@@ -110,13 +125,13 @@ export async function createGift(
             description: `Photo taken on ${new Date(
               customDates?.[file.name] || file.lastModified
             ).toLocaleDateString()}`,
-            ipfsHash: result.IpfsHash,
+            ipfsHash: result.ipfsHash,
             dateTaken:
               customDates?.[file.name] ||
               new Date(file.lastModified).toISOString(),
             width: 1280, // Default width
             height: 720, // Default height
-            url: `${gateway}/ipfs/${result.IpfsHash}`,
+            url: `/api/pinata/image?cid=${result.ipfsHash}`,
           };
         } catch (error) {
           console.error(
@@ -131,14 +146,36 @@ export async function createGift(
 
     // Create and upload the gift metadata
     console.log("📄 Creating gift metadata...");
+    onProgress?.({
+      uploadedFiles: files.length,
+      totalFiles: files.length,
+      status: "verifying",
+    });
+
     const giftData = {
       theme,
-      images: uploadedImages,
-      messages,
-      music,
+      title: title || "A Year in Memories",
+      images: uploadedImages.map((img) => ({
+        ...img,
+        url: `/api/pinata/image?cid=${img.ipfsHash}`,
+      })),
+      messages: messages || [],
+      music: music || [],
       createdAt: new Date().toISOString(),
-      title,
+      owner,
+      editors: [],
+      version: 1,
+      lastModified: new Date().toISOString(),
+      status: "published" as const,
     };
+
+    console.log("📄 Creating gift metadata:", {
+      theme,
+      title: giftData.title,
+      imageCount: giftData.images.length,
+      messageCount: giftData.messages.length,
+      musicCount: giftData.music.length,
+    });
 
     console.log("📄 Uploading gift metadata to IPFS...");
     const formData = new FormData();
@@ -146,14 +183,23 @@ export async function createGift(
       "file",
       new Blob([JSON.stringify(giftData)], { type: "application/json" })
     );
-    formData.append(
-      "metadata",
-      JSON.stringify({
-        name: `${giftId}-metadata`,
+
+    // Ensure metadata keyvalues are properly set
+    const metadataKeyvalues = {
+      name: `${giftId}-metadata`,
+      keyvalues: {
         giftId,
         type: "metadata",
-      })
-    );
+        owner: owner || "",
+        version: "1",
+        status: "published",
+        theme,
+        title: giftData.title,
+      },
+    };
+
+    console.log("📄 Setting metadata keyvalues:", metadataKeyvalues);
+    formData.append("metadata", JSON.stringify(metadataKeyvalues));
 
     const metadataResponse = await fetch("/api/pinata/upload", {
       method: "POST",
@@ -171,6 +217,12 @@ export async function createGift(
 
     // Wait for files to be processed
     console.log("⏳ Waiting for files to be processed...");
+    onProgress?.({
+      uploadedFiles: files.length,
+      totalFiles: files.length,
+      status: "pending",
+    });
+
     await new Promise((resolve) => setTimeout(resolve, 10000));
 
     // Verify all files are properly pinned
@@ -189,6 +241,12 @@ export async function createGift(
         pendingCids: verificationResult.missingCids,
       };
     }
+
+    onProgress?.({
+      uploadedFiles: files.length,
+      totalFiles: files.length,
+      status: "ready",
+    });
 
     console.log("🎁 Gift created successfully! Gift ID:", giftId);
     return {
@@ -256,22 +314,41 @@ export async function getImages({
     }
 
     const giftFiles = await response.json();
+    console.log(
+      "📂 Found files:",
+      giftFiles.rows.map((f: any) => ({
+        name: f.metadata?.name,
+        keyvalues: f.metadata?.keyvalues,
+        hash: f.ipfs_pin_hash,
+      }))
+    );
 
     // Find metadata file
     const metadataFile = giftFiles.rows.find((file: any) => {
       const keyvalues = file.metadata?.keyvalues;
-      return (
-        typeof keyvalues === "object" &&
-        keyvalues !== null &&
-        keyvalues["type"] === "metadata"
-      );
+      console.log("🔍 Checking file metadata:", {
+        name: file.metadata?.name,
+        keyvalues,
+        hash: file.ipfs_pin_hash,
+      });
+      return keyvalues?.type === "metadata" && keyvalues?.giftId === groupId;
     });
 
     if (!metadataFile) {
+      console.error(
+        "❌ No metadata file found. Files available:",
+        giftFiles.rows
+      );
       throw new Error(
         "Gift metadata not found. Please try again in a few moments."
       );
     }
+
+    console.log("✅ Found metadata file:", {
+      name: metadataFile.metadata?.name,
+      keyvalues: metadataFile.metadata?.keyvalues,
+      hash: metadataFile.ipfs_pin_hash,
+    });
 
     // Fetch metadata content using our API endpoint
     console.log("📄 Fetching metadata:", metadataFile.ipfs_pin_hash);
@@ -286,6 +363,7 @@ export async function getImages({
       messageCount: metadata.messages?.length,
       musicCount: metadata.music?.length,
       messages: metadata.messages,
+      title: metadata.title,
     });
 
     // Ensure all image URLs use the current gateway
@@ -295,11 +373,14 @@ export async function getImages({
     }));
 
     return {
-      images: metadata.images,
+      images: metadata.images.map((img: ImageProps) => ({
+        ...img,
+        url: `/api/pinata/image?cid=${img.ipfsHash}`,
+      })),
       theme: metadata.theme || "space",
-      messages: metadata.messages,
-      music: metadata.music,
-      title: metadata.title,
+      messages: metadata.messages || [],
+      music: metadata.music || [],
+      title: metadata.title || "A Year in Memories",
     };
   } catch (error) {
     console.error("❌ Error getting images:", error);

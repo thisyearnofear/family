@@ -13,6 +13,7 @@ import MonthlyView from "./MonthlyView";
 import TimelineControls from "./TimelineControls";
 import type { ImageProps } from "@utils/types/types";
 import SpaceIntro from "../themes/SpaceIntro";
+import { SONGS } from "../../utils/constants";
 
 interface SpaceTimelineProps {
   images: ImageProps[];
@@ -37,13 +38,6 @@ interface LoadingState {
     totalCount: number;
   };
 }
-
-const SONGS = [
-  { path: "/sounds/background-music.mp3", title: "Hopes and Dreams" },
-  { path: "/sounds/grow-old.mp3", title: "Grow Old Together" },
-  { path: "/sounds/mama.mp3", title: "Mamamayako" },
-  { path: "/sounds/baba.mp3", title: "Baba, I Understand" },
-];
 
 const HIGHLIGHT_INTERVAL = 5000; // 5 seconds per photo highlight
 

@@ -1,22 +1,4 @@
-// Prevent Web3 wallet injection
+// Only prevent automatic injection, don't completely block Web3
 if (window.ethereum) {
-  delete window.ethereum;
+  window.ethereum.autoRefreshOnNetworkChange = false;
 }
-Object.defineProperty(window, "ethereum", {
-  value: null,
-  configurable: false,
-  writable: false,
-});
-
-// Also prevent other common Web3 injections
-const web3Properties = ["web3", "ethereum", "solana"];
-web3Properties.forEach((prop) => {
-  if (window[prop]) {
-    delete window[prop];
-  }
-  Object.defineProperty(window, prop, {
-    value: null,
-    configurable: false,
-    writable: false,
-  });
-});

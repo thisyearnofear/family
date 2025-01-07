@@ -134,3 +134,9 @@ export interface GiftMetadata {
   music: string[];
   createdAt: string;
 }
+
+export interface Photo {
+  file: File;
+  preview: string;
+  dateTaken: string;
+}

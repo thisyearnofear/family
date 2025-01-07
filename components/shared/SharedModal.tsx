@@ -3,10 +3,10 @@ import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import Image from "next/image";
 import { useSwipeable } from "react-swipeable";
 import {
-  ArrowDownTrayIcon,
+  ArrowDownToLine,
   ChevronLeftIcon,
   ChevronRightIcon,
-  ArrowUturnLeftIcon,
+  ArrowLeft,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { variants } from "@utils/animations";
@@ -131,7 +131,7 @@ export default function SharedModal({
                 className="rounded-full bg-black/50 p-2 text-white backdrop-blur-lg transition hover:bg-black/75"
                 title="Download photo"
               >
-                <ArrowDownTrayIcon className="h-5 w-5" />
+                <ArrowDownToLine className="h-5 w-5" />
               </button>
             </div>
             <div className="absolute left-0 top-0 flex items-center gap-2 p-3 text-white">
@@ -142,7 +142,7 @@ export default function SharedModal({
                 {navigation ? (
                   <XMarkIcon className="h-5 w-5" />
                 ) : (
-                  <ArrowUturnLeftIcon className="h-5 w-5" />
+                  <ArrowLeft className="h-5 w-5" />
                 )}
               </button>
             </div>

@@ -26,8 +26,19 @@ export default function Timeline({
   // Start playing music when component mounts
   useEffect(() => {
     if (music && music.length > 0) {
-      console.log("Starting music playback:", music[0]);
-      togglePlaySong(music[0]);
+      // Find the matching song from our SONGS constant
+      const songPath = SONGS.find((song) =>
+        music.some(
+          (m) => m.includes(song.title.toLowerCase()) || song.path.includes(m)
+        )
+      )?.path;
+
+      if (songPath) {
+        console.log("Starting music playback:", songPath);
+        togglePlaySong(songPath);
+      } else {
+        console.warn("No matching song found for:", music[0]);
+      }
     }
   }, [music, togglePlaySong]);
 
@@ -159,10 +170,20 @@ export default function Timeline({
       {music.length > 0 && (
         <div className="fixed bottom-4 right-4 z-20">
           <button
-            onClick={() => togglePlaySong(music[0])}
+            onClick={() => {
+              const songPath = SONGS.find((song) =>
+                music.some(
+                  (m) =>
+                    m.includes(song.title.toLowerCase()) ||
+                    song.path.includes(m)
+                )
+              )?.path;
+              if (songPath) togglePlaySong(songPath);
+            }}
             className="p-3 rounded-full bg-white bg-opacity-90 shadow-lg hover:bg-opacity-100 transition-opacity"
           >
-            {currentPlayingSong === music[0] && isPlaying ? (
+            {SONGS.some((song) => currentPlayingSong === song.path) &&
+            isPlaying ? (
               <motion.div
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}

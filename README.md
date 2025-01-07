@@ -1,130 +1,155 @@
-# Memory Flow - Interactive Year-End Memory Experience
+# Famile.xyz
 
-## Vision
+A decentralized platform for creating and sharing collaborative family gifts, powered by the Lens Network.
 
-Memory Flow is an interactive gift experience that lets you share your year's most meaningful moments with loved ones. It transforms your photos into an engaging story that celebrates connection, presented in either a serene Zen Garden or cosmic Space journey theme.
+## Deployed Contracts
 
-### Key Features
+### Lens Testnet (Chain ID: 37111)
 
-- **Private Gift Experiences**: Each gift experience is securely stored using Pinata's Files API
-- **Interactive Timeline**: Navigate through memories with intuitive timeline controls
-  - Auto-highlighting feature with pause/resume functionality
-  - Smooth transitions between months and gallery view
-  - Manual navigation with previous/next month controls
-- **Monthly Collections**: Photos beautifully arranged in monthly collages with:
-  - Automatic date organization
-  - Smooth animations and transitions
-  - Responsive grid layouts
-- **Gallery View**: A stunning year-end collage that captures all moments
-  - Accessible through timeline navigation
-  - Grid layout optimized for viewing all photos
-  - Disables auto-highlighting for manual browsing
-- **Theme Options**: Choose between Space and Zen Garden themes, each with:
-  - Unique animations and visual effects
-  - Custom background elements
-  - Theme-specific color schemes and transitions
-- **Music Controls**:
-  - Play/pause background music
-  - Volume control
-  - Track selection with previous/next controls
-- **Upload Progress**:
-  - Detailed status messages for each stage
-  - Clear progress indicators
-  - User-friendly notifications
+- FamileInvites: [`0xFae263fE7ae81169119aC43e6523d51eaBC9b6D2`](https://block-explorer.testnet.lens.dev/address/0xFae263fE7ae81169119aC43e6523d51eaBC9b6D2)
+- Network RPC: `https://rpc.testnet.lens.dev`
+- Block Explorer: `https://block-explorer.testnet.lens.dev`
 
-## Technical Implementation
+## Features
 
-- Built with [Next.js](https://nextjs.org/) for seamless user experience
-- Styled with [Tailwind CSS](https://tailwindcss.com/) for beautiful, responsive design
-- Uses [Framer Motion](https://www.framer.com/motion/) for smooth animations
-- Features [Three.js](https://threejs.org/) for immersive 3D backgrounds
-- Implements React hooks for efficient state management
-- Uses memoization for optimized performance
+- Create collaborative digital gifts with family members
+- Invite editors and viewers using Lens Network profiles
+- Secure gift ownership and access control
+- Beautiful space-themed UI with interactive timeline views
+- Custom music playback for each gift
+- Real-time collaboration features
 
-## Storage Architecture
+## Technical Stack
 
-### Private Content (User Gifts)
+- Frontend: Next.js, TypeScript, Tailwind CSS, Framer Motion
+- Smart Contracts: Solidity (v0.8.24), Hardhat, ZKSync Era
+- Web3: Wagmi v2, ConnectKit, Lens Network
+- Storage: IPFS (Pinata)
+- Testing: Hardhat, Chai
 
-- Uses Pinata's Files API for secure, private storage
-- Each gift has a unique identifier
-- Content includes:
-  - Photos with metadata (date taken, description)
-  - Theme configuration
-  - Gift metadata
+### Known Issues
 
-### Demo Content
+- **Heroicons TypeScript Definitions**: There are some TypeScript linting errors related to Heroicons exports not being recognized. This is a type definition issue and does not affect the functionality of the UI. Will be addressed in a future update.
 
-- Pre-configured demo gifts for each theme
-- Accessible through environment variables
-- Showcases full functionality without user upload
+## Development Progress
 
-## Gift Creation Flow
+### Phase 1: Core Features ✅
 
-1. **Theme Selection**
+- Basic gift creation and viewing
+- Space-themed UI implementation
+- Music integration
+- Timeline navigation
 
-   - Choose between Space and Zen Garden themes
-   - Preview theme-specific animations
+### Phase 2: Smart Contract Implementation ✅
 
-2. **Photo Upload**
+- FamileInvites contract development
+- Access control and permissions
+- Contract deployment to Lens testnet
+- Contract verification
+- Integration with frontend
 
-   - Drag-and-drop interface
-   - Automatic date extraction
-   - Progress tracking with detailed status messages
+### Phase 3: Lens Network Integration ✅
 
-3. **Gift Organization**
+- [x] Lens Profile search functionality
+- [x] Collaborator management UI
+  - Add and remove collaborators
+  - Role-based permissions (editor/viewer)
+  - Real-time invite status tracking
+- [x] Smart contract deployment to Lens testnet
+- [x] On-chain invite verification
+- [x] Real-time updates for invite status
+  - Event-driven invite tracking
+  - Automatic UI updates on invite changes
+  - Role-based access control (editor/viewer)
+  - Time-based invite expiration handling
 
-   - Automatic monthly grouping
-   - Preview timeline functionality
-   - Gallery view arrangement
+### Phase 4: Enhanced Features (In Progress)
 
-4. **Gift Sharing**
+- [ ] Advanced collaboration features
+  - Real-time editing notifications
+  - Activity feed for gift changes
+  - Collaborative photo annotations
+- [ ] Gift templates and themes
+  - Japanese garden theme
+  - Custom theme builder
+- [ ] Advanced media handling
+  - Bulk photo upload
+  - Video support
+  - Photo editing tools
+- [ ] Social features
+  - Gift sharing on Lens
+  - Comment threads
+  - Reaction system
 
-   - Generate unique gift ID
-   - Copy or download sharing link
-   - Optional download of all content
+## Smart Contracts
 
-5. **Gift Viewing**
-   - Enter gift ID to unwrap
-   - Interactive timeline navigation
-   - Auto-highlighting with manual controls
+### FamileInvites.sol
 
-## Project Structure
+The main contract managing collaborative gift access and invites:
 
-- `components/`: Reusable UI components
-  - `timeline/`: Timeline and navigation components
-  - `themes/`: Theme-specific components and effects
-  - `ui/`: Common UI elements
-- `contexts/`: React context providers
-- `hooks/`: Custom React hooks
-- `pages/`: Next.js pages and API routes
-- `utils/`: Utility functions and types
+- Create and manage gift invites with role-based permissions
+- Time-bound invitations (up to 7 days validity)
+- Role-based access control (editors/viewers)
+- Event emission for real-time frontend updates
+- Secure ownership management
+- Invite cancellation and acceptance tracking
 
 ## Getting Started
 
-1. Clone this repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Set up environment variables:
-   ```env
-   PINATA_JWT=your_jwt_token
-   NEXT_PUBLIC_PINATA_GATEWAY=your_gateway_url
-   NEXT_PUBLIC_SPACE_DEMO_ID=your_space_demo_id
-   NEXT_PUBLIC_JAPANESE_DEMO_ID=your_japanese_demo_id
-   ```
-   Note: The Pinata JWT is now served securely through an API endpoint and should not be exposed to the client.
-4. Run the development server:
-   ```bash
-   npm run dev
-   ```
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Set up environment variables:
+
+```bash
+# Web3 Configuration
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
+NEXT_PUBLIC_ALCHEMY_ID=your_alchemy_id
+NEXT_PUBLIC_FAMILE_INVITES_ADDRESS=0xFae263fE7ae81169119aC43e6523d51eaBC9b6D2
+
+# Pinata Configuration (for IPFS)
+PINATA_API_KEY=your_pinata_api_key
+PINATA_API_SECRET=your_pinata_api_secret
+PINATA_JWT=your_pinata_jwt
+PINATA_GATEWAY=https://gateway.pinata.cloud
+```
+
+3. Configure Lens Network:
+
+- Add Lens Network to MetaMask:
+  - Network Name: Lens Testnet
+  - RPC URL: https://rpc.testnet.lens.dev
+  - Chain ID: 37111
+  - Currency Symbol: LENS
+
+4. Run development server:
+
+```bash
+npm run dev
+```
+
+5. Run tests:
+
+```bash
+npm run test
+```
+
+## Next Steps
+
+1. Deploy FamileInvites contract to Lens testnet
+2. Implement frontend integration with the contract
+3. Add real-time updates for invite status
+4. Enhance error handling and user feedback
+5. Add comprehensive documentation
+6. Set up continuous integration
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines before submitting pull requests.
 
 ## License
 
-### Code
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-### Media Content
-
-All images and videos are licensed under [Creative Commons Attribution-NonCommercial-NoDerivs 4.0](http://creativecommons.org/licenses/by-nc-nd/4.0/).
+MIT License - see LICENSE for details
