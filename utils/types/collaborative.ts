@@ -31,9 +31,13 @@ export interface CollaborativeGift {
   theme: "space" | "japanese";
   photos: {
     id: string;
+    name: string;
     url: string;
+    ipfsHash: string;
     description?: string;
     dateTaken: string;
+    width?: number;
+    height?: number;
   }[];
   messages: string[];
   music?: string[];

@@ -123,7 +123,9 @@ export function UploadStatusOverlay({
               </div>
 
               <div className="space-y-2 text-xs sm:text-sm text-gray-600">
-                <p>• Keep this ID safe - you'll need it to share your gift</p>
+                <p>
+                  • Keep this ID safe - you&apos;ll need it to share your gift
+                </p>
                 <p>• Your photos are stored privately and securely</p>
                 <p>• Only people with this ID can view your gift</p>
                 <p>• The gift will be shown in {theme} theme</p>

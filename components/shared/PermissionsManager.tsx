@@ -4,32 +4,33 @@ import { FAMILE_INVITES_ABI, FAMILE_INVITES_ADDRESS } from "@utils/constants";
 import type { Role, CurrentInvite } from "@utils/types/gift";
 import { useEnsName, useEnsAddress } from "wagmi";
 import { Address } from "viem";
+import { useInvites } from "@hooks/useInvites";
 
 interface PermissionsManagerProps {
   giftId: string;
-  isOwner: boolean;
-  onInviteCreated?: (invite: CurrentInvite) => void;
+  currentEditors: string[];
+  onInvite: (address: string, role: Role) => Promise<void>;
+  onRemove: (address: string) => Promise<void>;
 }
 
 export function PermissionsManager({
   giftId,
-  isOwner,
-  onInviteCreated,
+  currentEditors,
+  onInvite,
+  onRemove,
 }: PermissionsManagerProps) {
   const { address } = useAccount();
   const [inviteAddress, setInviteAddress] = useState("");
   const [role, setRole] = useState<Role>("editor");
   const [expiryDays, setExpiryDays] = useState(7);
   const [error, setError] = useState<string | null>(null);
-  const [currentInvites, setCurrentInvites] = useState<CurrentInvite[]>([]);
+  const { invites, isLoading } = useInvites(giftId);
 
   // ENS resolution
   const { data: ensName } = useEnsName({
     address: inviteAddress as `0x${string}`,
   });
   const { data: ensAddress } = useEnsAddress({ name: inviteAddress });
-
-  const { writeContract } = useWriteContract();
 
   const handleCreateInvite = async () => {
     try {
@@ -40,40 +41,11 @@ export function PermissionsManager({
         throw new Error("Invalid address");
       }
 
-      const newInvite: CurrentInvite = {
-        address: targetAddress,
-        role,
-        invitedAt: new Date().toISOString(),
-        status: "pending",
-        expiresAt: new Date(
-          Date.now() + expiryDays * 24 * 60 * 60 * 1000
-        ).toISOString(),
-      };
-
-      // Add to current invites before sending to contract
-      setCurrentInvites((prev) => [...prev, newInvite]);
-
-      await writeContract({
-        address: FAMILE_INVITES_ADDRESS as Address,
-        abi: FAMILE_INVITES_ABI,
-        functionName: "createInvite",
-        args: [
-          targetAddress as Address,
-          giftId,
-          role,
-          BigInt(expiryDays * 24 * 60 * 60), // Convert days to seconds
-        ] as const,
-      });
-
+      await onInvite(targetAddress, role);
       setInviteAddress("");
-      onInviteCreated?.(newInvite);
     } catch (err) {
       console.error("Error creating invite:", err);
       setError(err instanceof Error ? err.message : "Failed to create invite");
-      // Remove from current if failed
-      setCurrentInvites((prev) =>
-        prev.filter((p) => p.address !== (ensAddress || inviteAddress))
-      );
     }
   };
 
@@ -81,12 +53,69 @@ export function PermissionsManager({
     <div className="space-y-6">
       <div className="bg-blue-50 rounded-lg p-4">
         <p className="text-sm text-blue-700">
-          <strong>Note:</strong>{" "}
-          {isOwner
-            ? "As the owner, you can invite editors and viewers to collaborate on this gift."
-            : "As an editor, you can invite others to view or edit this gift."}
+          <strong>Note:</strong> As the owner, you can invite editors and viewers to collaborate on this gift.
         </p>
       </div>
+
+      {/* Current Editors */}
+      {currentEditors.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-lg font-medium text-gray-900">Current Editors</h3>
+          <div className="space-y-2">
+            {currentEditors.map((editorAddress) => (
+              <div
+                key={editorAddress}
+                className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+              >
+                <span className="font-mono text-sm text-gray-600">{editorAddress}</span>
+                <button
+                  onClick={() => onRemove(editorAddress)}
+                  className="text-red-600 hover:text-red-700 text-sm"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pending Invites */}
+      {invites.outgoing.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-lg font-medium text-gray-900">Pending Invites</h3>
+          <div className="space-y-2">
+            {invites.outgoing.map((invite) => {
+              const isExpired = Date.now() > invite.expiresAt * 1000;
+              const isPending = !invite.accepted && !invite.cancelled && !isExpired;
+              if (!isPending) return null;
+
+              return (
+                <div
+                  key={invite.id}
+                  className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                >
+                  <div>
+                    <span className="font-mono text-sm text-gray-600">{invite.to}</span>
+                    <span className="text-sm text-gray-500 ml-2 capitalize">({invite.role})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">
+                      Expires: {new Date(invite.expiresAt * 1000).toLocaleDateString()}
+                    </span>
+                    <button
+                      onClick={() => onRemove(invite.to)}
+                      className="text-red-600 hover:text-red-700 text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         <div>

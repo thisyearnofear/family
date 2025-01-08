@@ -1,8 +1,117 @@
 import { useState, useCallback } from "react";
 import { useAccount } from "wagmi";
-import { createGift } from "@utils/api/pinata";
 import { copyToClipboard, downloadGiftInfo } from "@utils/helpers";
 import type { Photo, UploadStatus, GiftTheme } from "@utils/types/gift";
+
+// Helper function to create a gift
+async function createGift(
+  files: File[],
+  theme: GiftTheme,
+  messages: string[],
+  selectedSongs: string[],
+  title: string,
+  customDates: { [key: string]: string },
+  ownerAddress?: string,
+  onProgress?: (progress: any) => void
+) {
+  try {
+    // Upload each photo and track progress
+    const uploadedPhotos = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append(
+        "metadata",
+        JSON.stringify({
+          name: `${title} - Photo ${i + 1}`,
+          keyvalues: {
+            type: "photo",
+            theme,
+            index: i,
+            date: customDates[file.name] || new Date().toISOString(),
+          },
+        })
+      );
+
+      const response = await fetch("/api/pinata/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to upload photo ${i + 1}`);
+      }
+
+      const { ipfsHash } = await response.json();
+      uploadedPhotos.push({
+        ipfsHash,
+        name: file.name,
+        date: customDates[file.name] || new Date().toISOString(),
+      });
+
+      // Report progress
+      onProgress?.({
+        status: "uploading",
+        uploadedFiles: i + 1,
+        totalFiles: files.length,
+      });
+    }
+
+    // Create metadata
+    const metadata = {
+      name: `${title} Metadata`,
+      keyvalues: {
+        type: "metadata",
+        theme,
+        owner: ownerAddress || "",
+        music: JSON.stringify(selectedSongs),
+        title,
+      },
+    };
+
+    // Upload metadata
+    const metadataContent = {
+      title,
+      theme,
+      images: uploadedPhotos,
+      messages,
+      music: selectedSongs,
+      owner: ownerAddress || "",
+      editors: [],
+      pendingInvites: [],
+      version: 1,
+      lastModified: new Date().toISOString(),
+    };
+
+    const metadataForm = new FormData();
+    metadataForm.append(
+      "file",
+      new Blob([JSON.stringify(metadataContent)], {
+        type: "application/json",
+      })
+    );
+    metadataForm.append("metadata", JSON.stringify(metadata));
+
+    onProgress?.({ status: "verifying" });
+
+    const metadataResponse = await fetch("/api/pinata/upload", {
+      method: "POST",
+      body: metadataForm,
+    });
+
+    if (!metadataResponse.ok) {
+      throw new Error("Failed to upload metadata");
+    }
+
+    onProgress?.({ status: "ready" });
+
+    return { giftId: metadataContent.title };
+  } catch (error) {
+    console.error("Error creating gift:", error);
+    throw error;
+  }
+}
 
 interface UseGiftCreationProps {
   onGiftCreated: (giftId: string) => void;
@@ -27,19 +136,20 @@ export function useGiftCreation({ onGiftCreated }: UseGiftCreationProps) {
         return prev;
       }
 
-      const currentProgress = prev.progress || 0;
-      const newProgress =
-        progress.status === "uploading"
-          ? (progress.uploadedFiles / progress.totalFiles) * 70
-          : progress.status === "verifying"
-            ? 85
-            : progress.status === "pending"
-              ? 95
-              : progress.status === "ready"
-                ? 100
-                : currentProgress;
+      // Calculate new progress percentage
+      let newProgress = 0;
+      if (progress.status === "uploading" && progress.totalFiles > 0) {
+        newProgress = Math.floor((progress.uploadedFiles / progress.totalFiles) * 70);
+      } else if (progress.status === "verifying") {
+        newProgress = 85;
+      } else if (progress.status === "pending") {
+        newProgress = 95;
+      } else if (progress.status === "ready") {
+        newProgress = 100;
+      }
 
       // Only update if progress has changed significantly
+      const currentProgress = typeof prev.progress === 'number' ? prev.progress : 0;
       if (
         Math.abs(newProgress - currentProgress) < 5 &&
         progress.status === prev.status

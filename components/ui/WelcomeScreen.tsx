@@ -1,6 +1,6 @@
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@contexts/ThemeContext";
-import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import { getImages } from "@utils/api/pinata";
@@ -35,47 +35,12 @@ const SOCIALS = [
     href: "https://paragraph.xyz/@papajams.eth",
     alt: "Paragraph Blog",
   },
-];
+] as const;
 
-const LoadingTransition = ({ theme }: { theme: "space" | "japanese" }) => {
-  const isSpace = theme === "space";
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className={`fixed inset-0 z-50 flex items-center justify-center ${
-        isSpace ? "bg-black" : "bg-white"
-      }`}
-    >
-      <div className="text-center">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="mb-6"
-        >
-          <span className="text-5xl">{isSpace ? "🚀" : "🌳"}</span>
-        </motion.div>
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.5, ease: "easeOut" }}
-          className={`text-xl ${
-            isSpace ? "text-white font-space" : "text-stone-800 font-japanese"
-          }`}
-        >
-          {isSpace ? "Preparing for launch..." : "Opening the garden..."}
-        </motion.div>
-      </div>
-    </motion.div>
-  );
-};
-
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
+export default function WelcomeScreen({
   onCreateGift,
   onUnwrapGift,
-}) => {
+}: WelcomeScreenProps): React.ReactElement {
   const router = useRouter();
   const { setTheme } = useTheme();
   const [giftId, setGiftId] = useState("");
@@ -99,7 +64,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         throw new Error(`No demo ID found for ${theme} theme`);
       }
 
-      const { images, messages, music } = await getImages({
+      const { images, messages, music, title } = await getImages({
         groupId: demoId,
         hasFiles: false,
         hasIpfs: false,
@@ -110,18 +75,21 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         throw new Error("No demo images found");
       }
 
+      // Use metadata music if available, otherwise fall back to demo songs
       const demoMusic = theme === "space" ? [SONGS[0].path] : [SONGS[2].path];
+      const finalMusic = music && music.length > 0 ? music : demoMusic;
 
       console.log("🚀 Demo content loaded:", {
         imageCount: images.length,
         messageCount: messages?.length,
-        musicCount: demoMusic.length,
-        music: demoMusic,
+        musicCount: finalMusic.length,
+        music: finalMusic,
+        isUsingMetadataMusic: music && music.length > 0,
       });
 
       // Set theme and transition to gift experience
       setTheme(theme);
-      onUnwrapGift(images, demoId, theme, messages, demoMusic);
+      onUnwrapGift(images, demoId, theme, messages, finalMusic, title);
     } catch (error) {
       console.error("❌ Error loading demo:", error);
       setError("Failed to load demo experience");
@@ -166,15 +134,72 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     }
   };
 
-  const handleEdit = (giftId: string) => {
-    if (!giftId.trim()) return;
-    router.push(`/edit/${giftId.trim()}`);
+  const handleEdit = async (giftId: string) => {
+    if (!giftId.trim()) {
+      setError("Please enter a gift ID");
+      return;
+    }
+
+    try {
+      // Basic validation of gift ID format only
+      const trimmedGiftId = giftId.trim();
+      if (!trimmedGiftId.startsWith("gift-")) {
+        throw new Error(
+          "Invalid gift ID format. Gift IDs should start with 'gift-'"
+        );
+      }
+
+      // Store gift ID in localStorage for persistence
+      localStorage.setItem("lastEditedGiftId", trimmedGiftId);
+
+      // Navigate to edit page without any API calls
+      console.log("🎁 Navigating to edit gift:", { giftId: trimmedGiftId });
+      router.push(`/edit/${trimmedGiftId}`);
+    } catch (error) {
+      console.error("Error:", error);
+      setError(
+        error instanceof Error ? error.message : "Invalid gift ID format"
+      );
+    }
   };
 
   return (
     <>
       <AnimatePresence>
-        {loadingTheme && <LoadingTransition theme={loadingTheme} />}
+        {loadingTheme && (
+          <div
+            className={`fixed inset-0 z-50 flex items-center justify-center ${
+              loadingTheme === "space" ? "bg-black" : "bg-white"
+            }`}
+          >
+            <div className="text-center">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="mb-6"
+              >
+                <span className="text-5xl">
+                  {loadingTheme === "space" ? "🚀" : "🌳"}
+                </span>
+              </motion.div>
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.5, ease: "easeOut" }}
+                className={`text-xl ${
+                  loadingTheme === "space"
+                    ? "text-white font-space"
+                    : "text-stone-800 font-japanese"
+                }`}
+              >
+                {loadingTheme === "space"
+                  ? "Preparing for launch..."
+                  : "Opening the garden..."}
+              </motion.div>
+            </div>
+          </div>
+        )}
       </AnimatePresence>
 
       <div className="min-h-screen bg-gradient-to-b from-rose-50 to-teal-50">
@@ -268,9 +293,35 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleEdit(giftId)}
                       disabled={isLoading}
-                      className="px-4 py-2 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50"
+                      className="px-4 py-2 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      Edit
+                      {isLoading ? (
+                        <>
+                          <svg
+                            className="animate-spin h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          <span>Checking...</span>
+                        </>
+                      ) : (
+                        "Edit"
+                      )}
                     </motion.button>
                   </div>
                 )}
@@ -323,6 +374,4 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
       </div>
     </>
   );
-};
-
-export default WelcomeScreen;
+}

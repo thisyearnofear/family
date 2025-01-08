@@ -4,7 +4,11 @@ export interface Photo {
   file: File;
   preview: string;
   dateTaken: string;
-  userDefinedDate?: string;
+  originalDate?: string;
+  isExisting: boolean;
+  isNew: boolean;
+  isDateModified: boolean;
+  ipfsHash?: string;
 }
 
 export interface UploadStatus {

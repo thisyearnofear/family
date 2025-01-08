@@ -66,7 +66,7 @@ export function WalletConnection({
         <div className="text-sm text-gray-500 pt-4">
           You can still create and share your gift without connecting.
           <br />
-          Just note that you won't be able to edit it later.
+          Just note that you won&apos;t be able to edit it later.
         </div>
       )}
     </div>

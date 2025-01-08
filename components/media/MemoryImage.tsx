@@ -24,6 +24,20 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 3;
 
+  // Auto-retry logic
+  useEffect(() => {
+    if (isError && retryCount < MAX_RETRIES) {
+      const timer = setTimeout(
+        () => {
+          setIsError(false);
+          setRetryCount((prev) => prev + 1);
+        },
+        2000 * (retryCount + 1)
+      ); // Exponential backoff
+      return () => clearTimeout(timer);
+    }
+  }, [isError, retryCount]);
+
   // Construct the full URL for the image
   const imageUrl =
     image.url ||
@@ -37,21 +51,6 @@ const MemoryImage: React.FC<MemoryImageProps> = ({
     console.error("No valid image URL found:", image);
     return null;
   }
-
-  // Auto-retry logic
-  useEffect(() => {
-    if (isError && retryCount < MAX_RETRIES) {
-      const timer = setTimeout(
-        () => {
-          setIsError(false);
-          setRetryCount((prev) => prev + 1);
-        },
-        2000 * (retryCount + 1)
-      ); // Exponential backoff
-
-      return () => clearTimeout(timer);
-    }
-  }, [isError, retryCount]);
 
   // Loading placeholder component
   const LoadingPlaceholder = () => (

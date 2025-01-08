@@ -50,6 +50,7 @@ const nextConfig = {
         pathname: "/ipfs/**",
       },
     ],
+    domains: ["gateway.pinata.cloud"],
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
   },
@@ -62,12 +63,6 @@ const nextConfig = {
   },
   typescript: {
     ignoreBuildErrors: true,
-  },
-  images: {
-    domains: ["gateway.pinata.cloud"],
-  },
-  api: {
-    bodyParser: false, // Disable the default body parser
   },
 };
 

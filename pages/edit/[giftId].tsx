@@ -1,146 +1,148 @@
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import { ConnectKitButton } from "connectkit";
-import { useAccount } from "wagmi";
-import { checkGiftPermissions } from "../../utils/helpers/permissions";
-import { fetchGiftMetadata } from "../../utils/api/pinata/metadata";
-import type { GiftPermissions } from "../../utils/types/collaborative";
-import type { CollaborativeGift } from "../../utils/types/collaborative";
-import EditGiftFlow from "../../components/ui/EditGiftFlow";
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import { ConnectKitButton } from 'connectkit';
+import { motion } from 'framer-motion';
+import EditGiftFlow from '@components/ui/EditGiftFlow';
+import { useGiftPermissions } from '@hooks/useGiftPermissions';
+import { WalletConnection } from '@components/shared/WalletConnection';
+import { GiftFlowLayout } from '@components/shared/GiftFlowLayout';
+import ErrorBoundary from '@components/shared/ErrorBoundary';
+import type { Step } from '@utils/types/gift';
+
+// Simple loading screen component
+function LoadingScreen({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-rose-50 to-teal-50">
+      <div className="max-w-md w-full px-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg text-center">
+          <div className="animate-spin text-2xl mb-4">⏳</div>
+          <p className="text-gray-600/90 font-['Lora']">{message}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Simplified dashboard for checking permissions
+function SimplifiedDashboard({ giftId, onBack, onWalletConnected }: { giftId: string; onBack: () => void; onWalletConnected: () => void }) {
+  const steps: Step[] = ['wallet', 'permissions'];
+  const currentStep: Step = 'wallet';
+  
+  return (
+    <ErrorBoundary>
+      <GiftFlowLayout
+        currentStep={currentStep}
+        steps={steps}
+        onClose={onBack}
+      >
+        <div className="max-w-2xl mx-auto px-4">
+          {/* Gift ID Display */}
+          <div className="mb-8 text-center">
+            <h1 className="text-4xl font-['Playfair_Display'] text-gray-800/90 mb-3">
+              Edit Gift
+            </h1>
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-100">
+              <p className="text-gray-600 mb-2">Gift ID</p>
+              <p className="font-mono text-sm bg-gray-50 p-2 rounded-lg break-all">
+                {giftId}
+              </p>
+            </div>
+          </div>
+
+          {/* Wallet Connection */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-gray-100">
+            <WalletConnection
+              onPrevious={onBack}
+              onNext={onWalletConnected}
+            />
+          </div>
+
+          {/* Help Text */}
+          <div className="mt-6 text-center text-sm text-gray-500">
+            <p>Need help? Check our <a href="#" className="text-blue-500 hover:text-blue-600">guide to editing gifts</a></p>
+          </div>
+        </div>
+      </GiftFlowLayout>
+    </ErrorBoundary>
+  );
+}
 
 export default function EditGiftPage() {
   const router = useRouter();
   const { giftId } = router.query;
-  const { address, isConnected } = useAccount();
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [gift, setGift] = useState<CollaborativeGift | null>(null);
-  const [permissions, setPermissions] = useState<GiftPermissions | null>(null);
+  const [shouldCheckPermissions, setShouldCheckPermissions] = useState(false);
 
+  const {
+    loading,
+    error,
+    gift,
+    userRole,
+    isConnected,
+    isLoadingMetadata,
+    loadGiftMetadata,
+  } = useGiftPermissions(giftId as string, shouldCheckPermissions);
+
+  // Load metadata when we have permissions
   useEffect(() => {
-    async function loadGiftAndPermissions() {
-      if (!giftId || typeof giftId !== "string" || !isConnected || !address) {
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        // Fetch gift metadata
-        const giftData = await fetchGiftMetadata(giftId);
-        if (!giftData) {
-          throw new Error("Gift not found");
-        }
-        setGift(giftData);
-
-        // Check permissions
-        const perms = await checkGiftPermissions(giftId, address);
-        if (!perms.canEdit) {
-          throw new Error("You don't have permission to edit this gift");
-        }
-        setPermissions(perms);
-      } catch (err) {
-        console.error("Error loading gift:", err);
-        setError(err instanceof Error ? err.message : "Failed to load gift");
-      } finally {
-        setIsLoading(false);
-      }
+    if (userRole && !gift && !isLoadingMetadata) {
+      loadGiftMetadata();
     }
+  }, [userRole, gift, isLoadingMetadata, loadGiftMetadata]);
 
-    loadGiftAndPermissions();
-  }, [giftId, isConnected, address]);
-
-  // Loading state
-  if (isLoading || !giftId) {
+  // If not checking permissions yet, show simplified dashboard
+  if (!shouldCheckPermissions) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-rose-50 to-teal-50">
-        <div className="max-w-md w-full px-4">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg text-center">
-            <div className="animate-spin text-2xl mb-4">⏳</div>
-            <p className="text-gray-600/90 font-['Lora']">
-              Loading gift details...
-            </p>
-          </div>
-        </div>
-      </div>
+      <SimplifiedDashboard 
+        giftId={giftId as string} 
+        onBack={() => router.push('/')}
+        onWalletConnected={() => setShouldCheckPermissions(true)}
+      />
     );
   }
 
-  // Not connected state
-  if (!isConnected) {
+  // Show loading screen while checking permissions
+  if (loading) {
+    return <LoadingScreen message="Checking permissions..." />;
+  }
+
+  // Show loading screen while loading metadata
+  if (isLoadingMetadata) {
+    return <LoadingScreen message="Loading gift details..." />;
+  }
+
+  // If we have a gift and permissions, show the edit flow
+  if (gift) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-rose-50 to-teal-50">
-        <div className="max-w-md w-full px-4">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg text-center">
-            <h1 className="text-2xl font-['Lora'] text-gray-800/90 mb-4">
-              Connect Wallet to Edit
-            </h1>
-            <p className="text-gray-600/90 mb-6 font-['Lora']">
-              To edit this memory, please connect your wallet first.
-            </p>
-            <ConnectKitButton />
-          </div>
-        </div>
-      </div>
+      <EditGiftFlow
+        gift={gift}
+        userRole={userRole || undefined}
+        onSave={async (updates) => {
+          // TODO: Implement save functionality
+          console.log('Saving updates:', updates);
+        }}
+        onClose={() => router.push('/')}
+      />
     );
   }
 
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-rose-50 to-teal-50">
-        <div className="max-w-md w-full px-4">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg text-center">
-            <h1 className="text-2xl font-['Lora'] text-gray-800/90 mb-4">
-              {error === "Gift not found" ? "Gift Not Found" : "Access Denied"}
-            </h1>
-            <p className="text-red-600/90 mb-6 font-['Lora']">{error}</p>
-            <button
-              onClick={() => router.push("/")}
-              className="px-4 py-2 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors"
-            >
-              Return Home
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // No gift or permissions state
-  if (!gift || !permissions) {
-    return null;
-  }
-
-  const handleSave = async (updates: Partial<CollaborativeGift>) => {
-    try {
-      // Verify permissions again before saving
-      const currentPerms = await checkGiftPermissions(
-        giftId as string,
-        address!
-      );
-      if (!currentPerms.canEdit) {
-        throw new Error("You no longer have permission to edit this gift");
-      }
-
-      // TODO: Implement save functionality
-      console.log("Saving updates:", updates);
-
-      // Update local gift state
-      setGift((prev) => (prev ? { ...prev, ...updates } : null));
-    } catch (err) {
-      console.error("Error saving gift:", err);
-      throw err;
-    }
-  };
-
+  // If connected but no permissions, show no access state
   return (
     <EditGiftFlow
-      gift={gift}
-      userRole={permissions.canInvite ? "owner" : "editor"}
-      onSave={handleSave}
-      onClose={() => router.push("/")}
+      gift={{
+        giftId: giftId as string,
+        title: '',
+        theme: 'japanese',
+        photos: [],
+        messages: [],
+        music: [],
+        owner: '',
+        editors: [],
+        version: 1,
+        lastModified: new Date().toISOString(),
+      }}
+      userRole={userRole || undefined}
+      onSave={async () => {}}
+      onClose={() => router.push('/')}
     />
   );
 }

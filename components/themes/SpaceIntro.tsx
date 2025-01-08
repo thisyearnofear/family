@@ -2,9 +2,16 @@ import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as THREE from "three";
 
+interface Message {
+  id: string;
+  content: string;
+  author: string;
+  createdAt: string;
+}
+
 interface SpaceIntroProps {
   onComplete: () => void;
-  messages?: string[];
+  messages?: Message[];
 }
 
 const SpaceIntro: React.FC<SpaceIntroProps> = ({
@@ -18,7 +25,7 @@ const SpaceIntro: React.FC<SpaceIntroProps> = ({
 
   const introTexts =
     messages.length > 0
-      ? messages
+      ? messages.map((msg) => msg.content)
       : [
           "Family is constant — gravity's centre, anchor in the cosmos.",
           "Every memory, an imprint of love, laughter, togetherness: etched in the universe.",
