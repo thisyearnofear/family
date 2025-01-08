@@ -3,10 +3,10 @@ import PinataSDK from "@pinata/sdk";
 
 const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || process.env.PINATA_JWT;
 const PINATA_GATEWAY =
-  process.env.NEXT_PUBLIC_PINATA_GATEWAY || "https://gateway.pinata.cloud/ipfs";
+  process.env.NEXT_PUBLIC_PINATA_GATEWAY || "https://gateway.pinata.cloud";
 
 if (!PINATA_JWT) {
-  throw new Error("Missing Pinata JWT configuration");
+  console.error("❌ Missing Pinata JWT configuration");
 }
 
 const pinata = new PinataSDK({ pinataJWTKey: PINATA_JWT });
@@ -33,15 +33,50 @@ export default async function handler(
     }
 
     try {
-      // Try to fetch metadata from Pinata gateway
-      const response = await fetch(`${PINATA_GATEWAY}/${cid}`);
+      // Try different gateways if one fails
+      const gateways = [
+        `${PINATA_GATEWAY}/ipfs`,
+        "https://ipfs.io/ipfs",
+        "https://cloudflare-ipfs.com/ipfs",
+      ];
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch metadata: ${response.statusText}`);
+      let lastError;
+      for (const gateway of gateways) {
+        try {
+          console.log(`🌐 Trying gateway: ${gateway} for CID: ${cid}`);
+          const response = await fetch(`${gateway}/${cid}`);
+
+          if (!response.ok) {
+            if (response.status === 429) {
+              console.log(
+                `⚠️ Rate limited on ${gateway}, trying next gateway...`
+              );
+              continue;
+            }
+            const errorText = await response.text();
+            console.error(`❌ Gateway ${gateway} error:`, {
+              status: response.status,
+              statusText: response.statusText,
+              body: errorText,
+            });
+            throw new Error(
+              `HTTP error! status: ${response.status} - ${errorText}`
+            );
+          }
+
+          const metadata = await response.json();
+          console.log("✅ Successfully fetched metadata from", gateway);
+          return res.status(200).json(metadata);
+        } catch (error) {
+          console.error(`❌ Failed to fetch from ${gateway}:`, error);
+          lastError = error;
+        }
       }
 
-      const metadata = await response.json();
-      return res.status(200).json(metadata);
+      console.error("❌ All gateways failed:", lastError);
+      throw (
+        lastError || new Error("Failed to fetch metadata from all gateways")
+      );
     } catch (error) {
       console.error("Error fetching metadata:", error);
       return res.status(500).json({
