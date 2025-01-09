@@ -1,20 +1,26 @@
-export const UPLOAD_LIMITS = {
-  MAX_TOTAL_SIZE: 50 * 1024 * 1024, // 50MB total
-  MAX_SINGLE_FILE: 10 * 1024 * 1024, // 10MB per photo
-  MAX_PHOTOS: 30, // Maximum number of photos
-  BATCH_SIZE: 5, // Process 5 at a time
-  CACHE_AGE: 60 * 60 * 1000, // 1 hour cache
-} as const;
+export const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50MB total
+export const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB per image
+export const CACHE_AGE = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+export const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/heic",
+];
 
-// Helper functions for formatting
+// For better user feedback
 export const formatFileSize = (bytes: number): string => {
-  const mb = Math.round(bytes / 1024 / 1024);
-  return `${mb}MB`;
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 };
 
 export const getFileSizeError = (fileSize: number): string | null => {
-  if (fileSize > UPLOAD_LIMITS.MAX_SINGLE_FILE) {
-    return `File size (${formatFileSize(fileSize)}) exceeds the ${formatFileSize(UPLOAD_LIMITS.MAX_SINGLE_FILE)} limit`;
+  if (fileSize > MAX_IMAGE_SIZE) {
+    return `File size (${formatFileSize(fileSize)}) exceeds the ${formatFileSize(MAX_IMAGE_SIZE)} limit`;
   }
   return null;
 };

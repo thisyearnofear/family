@@ -15,9 +15,16 @@ import type { ImageProps } from "@utils/types/types";
 import SpaceIntro from "../themes/SpaceIntro";
 import { SONGS } from "../../utils/constants";
 
+interface Message {
+  id: string;
+  content: string;
+  author: string;
+  createdAt: string;
+}
+
 interface SpaceTimelineProps {
   images: ImageProps[];
-  messages: string[];
+  messages: Message[];
   music: string[];
   title?: string;
   isAutoHighlighting: boolean;
@@ -96,10 +103,10 @@ export default function SpaceTimeline({
 
       const lastMonth = months[months.length - 1];
       if (lastMonth && lastMonth.key === monthKey) {
-        if (lastMonth.images.length < 10) {
-          lastMonth.images.push(image);
-        }
+        // Add to existing month
+        lastMonth.images.push(image);
       } else {
+        // Create new month
         months.push({
           key: monthKey,
           month: monthName,
@@ -108,6 +115,16 @@ export default function SpaceTimeline({
         });
       }
       currentStartIndex++;
+    });
+
+    // Sort images within each month by date
+    months.forEach((month) => {
+      month.images.sort((a, b) => {
+        if (!a.dateTaken || !b.dateTaken) return 0;
+        return (
+          new Date(a.dateTaken).getTime() - new Date(b.dateTaken).getTime()
+        );
+      });
     });
 
     // Add gallery as final stage

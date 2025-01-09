@@ -154,7 +154,7 @@ export async function getImages({
       ? metadata.photos.map((ipfsHash: string) => ({
           ipfsHash,
           url: `/api/pinata/image?cid=${ipfsHash}`,
-          description: `Photo from ${metadata.title || "gift"}`,
+          description: `Photo from ${keyvalues.title || metadata.title || "gift"}`,
           dateTaken: metadata.dateTaken || metadata.createdAt,
           width: 1280, // Default dimensions
           height: 720,
@@ -170,11 +170,12 @@ export async function getImages({
 
     return {
       images,
-      theme: metadata.theme || keyvalues.theme || "space",
+      theme: keyvalues.theme || metadata.theme || "space",
       messages: metadata.messages || [],
-      music:
-        metadata.music || (keyvalues.music ? JSON.parse(keyvalues.music) : []),
-      title: metadata.title || keyvalues.title || "A Year in Memories",
+      music: keyvalues.music
+        ? JSON.parse(keyvalues.music)
+        : metadata.music || [],
+      title: keyvalues.title || metadata.title || "A Year in Memories",
     };
   } catch (error) {
     console.error("❌ Error getting images:", error);

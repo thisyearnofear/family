@@ -1,9 +1,31 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { Readable } from "stream";
 
 // Get environment variables with fallbacks
 const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || process.env.PINATA_JWT;
 const PINATA_GATEWAY =
   process.env.NEXT_PUBLIC_PINATA_GATEWAY || "https://gateway.pinata.cloud";
+
+export const config = {
+  api: {
+    responseLimit: false,
+    bodyParser: false,
+  },
+};
+
+// Helper function to convert ReadableStream to AsyncIterable
+async function* streamToAsyncIterable(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.getReader();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      yield value;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -52,25 +74,28 @@ export default async function handler(
             );
             continue;
           }
-          const errorText = await response.text();
-          console.error(`❌ Gateway ${gateway} error:`, {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorText,
-          });
-          throw new Error(
-            `HTTP error! status: ${response.status} - ${errorText}`
-          );
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         // Get the content type from the response
         const contentType = response.headers.get("content-type");
         console.log(`✅ Successfully fetched image from ${gateway}`);
 
-        // Stream the response directly to the client
+        // Set response headers
         res.setHeader("Content-Type", contentType || "image/*");
-        const imageData = await response.arrayBuffer();
-        res.send(Buffer.from(imageData));
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+
+        // Convert ReadableStream to Node.js Readable stream
+        const stream = response.body;
+        if (!stream) {
+          throw new Error("No response body");
+        }
+
+        // Create a Node.js Readable stream from the response body
+        const readable = Readable.from(streamToAsyncIterable(stream));
+
+        // Pipe the response stream directly to the client
+        readable.pipe(res);
         return;
       } catch (error) {
         console.error(`❌ Failed to fetch from ${gateway}:`, error);

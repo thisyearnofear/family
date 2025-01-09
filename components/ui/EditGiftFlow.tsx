@@ -1,501 +1,686 @@
-import React, { useState, useCallback, useEffect, lazy, Suspense } from "react";
-import { motion } from "framer-motion";
-import { useRouter } from "next/router";
-import { useAccount } from "wagmi";
-import { ConnectKitButton } from "connectkit";
+import React, { useState, useEffect, useCallback } from "react";
+import { Tab } from "@headlessui/react";
 import {
-  PhotoIcon,
-  PencilSquareIcon,
-  UserGroupIcon,
   XMarkIcon,
+  SparklesIcon,
+  ArrowPathIcon,
   ExclamationCircleIcon,
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
-import type { CollaborativeGift } from "@utils/types/collaborative";
-import type { Photo } from "@utils/types/gift";
-
-interface StagedChanges {
-  photos?: Photo[];
-  messages?: string[];
-  music?: string[];
-}
-
-// Lazy load heavy components with proper types
-const PhotoUpload = lazy(() =>
-  import("@components/shared/PhotoUpload").then((mod) => ({
-    default: mod.PhotoUpload,
-  }))
-);
-const MessageInput = lazy(() =>
-  import("@components/shared/MessageInput").then((mod) => ({
-    default: mod.MessageInput,
-  }))
-);
-const MusicSelection = lazy(() =>
-  import("@components/shared/MusicSelection").then((mod) => ({
-    default: mod.MusicSelection,
-  }))
-);
-const PermissionsDashboard = lazy(() =>
-  import("@components/shared/PermissionsDashboard").then((mod) => ({
-    default: mod.PermissionsDashboard,
-  }))
-);
-const WalletEducation = lazy(() => import("./WalletEducation"));
-
-// Loading fallback component
-const LoadingFallback = (): React.ReactElement => (
-  <div className="w-full h-64 flex items-center justify-center">
-    <div className="space-y-2 text-center">
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-      <p className="text-sm text-gray-500">Loading...</p>
-    </div>
-  </div>
-);
+import { EditPhotoUpload } from "@components/shared/EditPhotoUpload";
+import { MessageInput } from "@components/shared/MessageInput";
+import { MusicSelection } from "@components/shared/MusicSelection";
+import { BaseModal } from "@components/shared/base/BaseModal";
+import { useGiftPhotos } from "@hooks/useGiftPhotos";
+import { useGiftEditor } from "@hooks/useGiftEditor";
+import { Photo, UploadStatus } from "@utils/types/gift";
+import { CollaborativeGift } from "@utils/types/collaborative";
+import { UploadStatusOverlay } from "@components/shared/UploadStatusOverlay";
 
 interface EditGiftFlowProps {
   gift: CollaborativeGift;
-  userRole?: "owner" | "editor";
+  userRole: "owner" | "editor" | null;
   onSave: (updates: Partial<CollaborativeGift>) => Promise<void>;
-  onClose: () => void;
+  onClose: () => Promise<void | boolean>;
 }
 
-export default function EditGiftFlow({
+interface ChangesSummary {
+  photos: {
+    added: number;
+    modified: number;
+    deleted: number;
+  };
+  messages: boolean;
+  music: boolean;
+}
+
+export function EditGiftFlow({
   gift,
   userRole,
   onSave,
   onClose,
 }: EditGiftFlowProps): React.ReactElement {
-  const router = useRouter();
-  const { isConnected } = useAccount();
-  const [showEducation, setShowEducation] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "messages" | "music" | "photos" | "preview"
-  >("messages");
-  const [showPermissions, setShowPermissions] = useState(true);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showChangesSummary, setShowChangesSummary] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
+    isUploading: false,
+    status: "idle",
+  });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [changesSummary, setChangesSummary] = useState<ChangesSummary>({
+    photos: { added: 0, modified: 0, deleted: 0 },
+    messages: false,
+    music: false,
+  });
 
-  // Track staged changes
-  const [stagedChanges, setStagedChanges] = useState<StagedChanges>({});
+  // Store original state for discarding changes
+  const [originalState, setOriginalState] = useState({
+    photos: [] as Photo[],
+    messages: [] as string[],
+    music: [] as string[],
+  });
 
-  // Initialize staged changes with current gift data
+  const {
+    photos,
+    loadedPhotos,
+    skippedPhotos,
+    loadingState,
+    setPhotos,
+    loadNextBatch,
+    updatePhoto,
+  } = useGiftPhotos();
+  const { messages, setMessages, music, setMusic, deleteGift } =
+    useGiftEditor();
+
+  // Initialize state from gift data
   useEffect(() => {
-    setStagedChanges({
-      photos:
-        gift.photos?.map(
-          (photo) =>
-            ({
-              file: new File([], photo.name),
-              preview: `/api/pinata/image?cid=${photo.ipfsHash}`,
-              dateTaken: photo.dateTaken,
-              originalDate: photo.dateTaken,
-              isExisting: true,
-              isNew: false,
-              isDateModified: false,
-              ipfsHash: photo.ipfsHash,
-            }) as Photo
-        ) || [],
+    // Try to load draft first
+    try {
+      const savedDraft = localStorage.getItem(`gift-${gift.giftId}-draft`);
+      if (savedDraft) {
+        const { photos: draftPhotos, lastModified } = JSON.parse(savedDraft);
+        const draftDate = new Date(lastModified);
+        const giftDate = new Date(gift.lastModified);
+
+        // Only use draft if it's newer than the gift's last modification
+        if (draftDate > giftDate) {
+          console.log("Restoring draft from:", lastModified);
+          setPhotos(draftPhotos);
+          setHasUnsavedChanges(true);
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn("Failed to load draft:", error);
+    }
+
+    // If no draft or draft is older, use gift data
+    const convertedPhotos: Photo[] = (gift.photos || []).map((photo) => ({
+      file: new File([], photo.name), // Placeholder file
+      preview: photo.url,
+      dateTaken: photo.dateTaken,
+      ipfsHash: photo.ipfsHash,
+      isExisting: true,
+      isNew: false,
+      isDateModified: false,
+      isDeleted: false,
+      originalDate: photo.dateTaken, // Store original date for comparison
+    }));
+    setPhotos(convertedPhotos);
+    setMessages(gift.messages || []);
+    setMusic(gift.music || []);
+
+    // Store original state for discarding changes
+    setOriginalState({
+      photos: convertedPhotos,
       messages: gift.messages || [],
       music: gift.music || [],
     });
+  }, [gift, setPhotos, setMessages, setMusic]);
 
-    // Start preloading images immediately when gift data is available
-    if (gift.photos?.length) {
-      const preloadImages = async () => {
-        const imageCache = new Map();
-        const batchSize = 3;
-        const photos = gift.photos || [];
+  // Handle photo changes with proper state flags
+  const handlePhotoChange = useCallback(
+    (newPhotos: Photo[]) => {
+      // Find which photo was changed by comparing with current state
+      const changedPhotoIndex = newPhotos.findIndex((photo, index) => {
+        const currentPhoto = loadedPhotos[index];
+        if (!currentPhoto) return false;
+        return (
+          photo.dateTaken !== currentPhoto.dateTaken ||
+          photo.isDeleted !== currentPhoto.isDeleted
+        );
+      });
 
-        for (let i = 0; i < photos.length; i += batchSize) {
-          const batch = photos.slice(i, i + batchSize);
-          await Promise.all(
-            batch.map(async (photo) => {
-              const url = `/api/pinata/image?cid=${photo.ipfsHash}`;
-              if (!imageCache.has(url)) {
-                try {
-                  const response = await fetch(url);
-                  const blob = await response.blob();
-                  const objectUrl = URL.createObjectURL(blob);
-                  imageCache.set(url, objectUrl);
-                } catch (error) {
-                  console.error("Error preloading image:", error);
-                }
-              }
-            })
-          );
+      if (changedPhotoIndex !== -1) {
+        const changedPhoto = newPhotos[changedPhotoIndex];
+        const originalPhoto = originalState.photos.find(
+          (p) =>
+            p.ipfsHash === changedPhoto.ipfsHash ||
+            p.file.name === changedPhoto.file.name
+        );
+
+        if (originalPhoto) {
+          const isDateModified =
+            changedPhoto.dateTaken !==
+            (originalPhoto.originalDate || originalPhoto.dateTaken);
+
+          // Create updated photo with proper flags
+          const updatedPhoto = {
+            ...changedPhoto,
+            isDateModified,
+            originalDate: originalPhoto.originalDate || originalPhoto.dateTaken,
+            isDeleted: changedPhoto.isDeleted ?? originalPhoto.isDeleted,
+          };
+
+          // Debug state changes
+          console.log("Photo state change:", {
+            name: updatedPhoto.file.name,
+            isDateModified,
+            originalDate: originalPhoto.originalDate || originalPhoto.dateTaken,
+            newDate: updatedPhoto.dateTaken,
+            isDeleted: updatedPhoto.isDeleted,
+          });
+
+          // Update the specific photo
+          updatePhoto(changedPhotoIndex, updatedPhoto);
+          setHasUnsavedChanges(true);
+
+          // Store the updated state in localStorage for recovery
+          try {
+            localStorage.setItem(
+              `gift-${gift.giftId}-draft`,
+              JSON.stringify({
+                photos: newPhotos,
+                lastModified: new Date().toISOString(),
+              })
+            );
+          } catch (error) {
+            console.warn("Failed to save draft:", error);
+          }
         }
+      } else {
+        // If we can't find which photo changed, fall back to updating all photos
+        setPhotos(newPhotos);
+      }
+    },
+    [loadedPhotos, originalState.photos, updatePhoto, setPhotos, gift.giftId]
+  );
+
+  // Handle discarding changes
+  const handleDiscardChanges = useCallback(() => {
+    setPhotos(originalState.photos);
+    setMessages(originalState.messages);
+    setMusic(originalState.music);
+    setHasUnsavedChanges(false);
+    setIsPreviewMode(false);
+  }, [originalState, setPhotos, setMessages, setMusic]);
+
+  // Track changes and update summary
+  useEffect(() => {
+    const newChangesSummary: ChangesSummary = {
+      photos: {
+        added: loadedPhotos.filter((p) => p.isNew).length,
+        modified: loadedPhotos.filter((p) => p.isDateModified).length,
+        deleted: loadedPhotos.filter((p) => p.isDeleted).length,
+      },
+      messages:
+        JSON.stringify(messages) !== JSON.stringify(originalState.messages),
+      music: JSON.stringify(music) !== JSON.stringify(originalState.music),
+    };
+
+    setChangesSummary(newChangesSummary);
+    setHasUnsavedChanges(
+      newChangesSummary.photos.added > 0 ||
+        newChangesSummary.photos.modified > 0 ||
+        newChangesSummary.photos.deleted > 0 ||
+        newChangesSummary.messages ||
+        newChangesSummary.music
+    );
+  }, [loadedPhotos, messages, music, originalState]);
+
+  // Handle saving changes
+  const handleSave = async () => {
+    // First, enter preview mode to review changes
+    setIsPreviewMode(true);
+  };
+
+  // Handle confirming changes and saving to IPFS
+  const handleConfirmChanges = async () => {
+    try {
+      setUploadStatus({
+        isUploading: true,
+        status: "uploading",
+        message: "Uploading modified photos to IPFS...",
+        uploadedFiles: 0,
+        totalFiles: loadedPhotos.filter((p) => p.isNew || p.isDateModified)
+          .length,
+      });
+
+      // First upload any new or modified photos
+      const updatedPhotos = await Promise.all(
+        loadedPhotos
+          .filter((p) => !p.isDeleted)
+          .map(async (photo, index) => {
+            // If photo is new or modified, upload it
+            if (photo.isNew || photo.isDateModified) {
+              const formData = new FormData();
+              formData.append("file", photo.file);
+              formData.append(
+                "metadata",
+                JSON.stringify({
+                  name: photo.file.name,
+                  keyvalues: {
+                    type: "photo",
+                    giftId: gift.giftId,
+                    dateTaken: photo.dateTaken,
+                  },
+                })
+              );
+
+              const response = await fetch("/api/pinata/upload", {
+                method: "POST",
+                body: formData,
+              });
+
+              if (!response.ok) {
+                throw new Error(
+                  `Failed to upload photo: ${response.statusText}`
+                );
+              }
+
+              const { ipfsHash } = await response.json();
+
+              // Update progress
+              setUploadStatus((prev) => ({
+                ...prev,
+                uploadedFiles: (prev.uploadedFiles || 0) + 1,
+                message: `Uploading photos to IPFS (${index + 1}/${loadedPhotos.length})...`,
+              }));
+
+              return {
+                id: ipfsHash,
+                name: photo.file.name,
+                url: photo.preview,
+                ipfsHash,
+                dateTaken: photo.dateTaken,
+                description: `Photo taken on ${new Date(photo.dateTaken).toLocaleDateString()}`,
+                width: 1280, // Default width
+                height: 720, // Default height
+              };
+            }
+
+            // If photo is unchanged, return existing data
+            return {
+              id: photo.ipfsHash,
+              name: photo.file.name,
+              url: photo.preview,
+              ipfsHash: photo.ipfsHash,
+              dateTaken: photo.dateTaken,
+              description: `Photo taken on ${new Date(photo.dateTaken).toLocaleDateString()}`,
+              width: 1280,
+              height: 720,
+            };
+          })
+      );
+
+      setUploadStatus((prev) => ({
+        ...prev,
+        status: "verifying",
+        message: "Creating updated gift metadata...",
+      }));
+
+      // Create updated metadata
+      const updatedMetadata = {
+        ...gift,
+        photos: updatedPhotos,
+        messages,
+        music,
+        lastModified: new Date().toISOString(),
+        version: gift.version + 1,
       };
 
-      preloadImages();
-    }
-  }, [gift]);
+      // Upload metadata to IPFS
+      const metadataResponse = await fetch("/api/pinata/metadata", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...updatedMetadata,
+          pinataMetadata: {
+            name: `Gift ${gift.giftId} Metadata`,
+            keyvalues: {
+              giftId: gift.giftId,
+              type: "metadata",
+              owner: gift.owner,
+              version: updatedMetadata.version.toString(),
+            },
+          },
+        }),
+      });
 
-  // Compare arrays for changes
-  const hasArrayChanges = useCallback(
-    (key: keyof StagedChanges): boolean => {
-      const stagedArray = stagedChanges[key];
-      const giftArray = gift[key as keyof CollaborativeGift];
-
-      if (!Array.isArray(stagedArray) || !Array.isArray(giftArray)) {
-        return false;
-      }
-
-      if (stagedArray.length !== giftArray.length) {
-        return true;
-      }
-
-      if (key === "photos") {
-        return (stagedArray as Photo[]).some(
-          (photo) => photo.isNew || photo.isDateModified
+      if (!metadataResponse.ok) {
+        const error = await metadataResponse.json();
+        throw new Error(
+          `Failed to upload gift metadata: ${error.message || error.error || "Unknown error"}`
         );
       }
 
-      return false;
-    },
-    [stagedChanges, gift]
-  );
+      const { ipfsHash: metadataHash } = await metadataResponse.json();
 
-  // Handle saving all changes
-  const handleSaveChanges = async () => {
-    if (!stagedChanges.photos) return;
+      // Clear draft from local storage
+      localStorage.removeItem(`gift-${gift.giftId}-draft`);
 
-    // Convert staged photos to the gift format
-    const updatedPhotos = stagedChanges.photos.map((photo, index) => ({
-      id: String(index + 1),
-      name: photo.file.name,
-      description: `Photo taken on ${new Date(photo.dateTaken).toLocaleDateString()}`,
-      ipfsHash: photo.preview.startsWith("/api/pinata/image?cid=")
-        ? photo.preview.split("=")[1]
-        : "",
-      dateTaken: photo.dateTaken,
-      url: photo.preview,
-      width: 1280,
-      height: 720,
-    }));
+      setUploadStatus({
+        isUploading: false,
+        status: "ready",
+        message: "Changes saved successfully!",
+        giftId: gift.giftId,
+        ipfsHash: metadataHash,
+      });
 
-    await onSave({
-      ...gift,
-      photos: updatedPhotos,
-      messages: stagedChanges.messages,
-      music: stagedChanges.music,
-    });
+      // Update original state with new values
+      setOriginalState({
+        photos: loadedPhotos,
+        messages,
+        music,
+      });
+
+      setHasUnsavedChanges(false);
+      setIsPreviewMode(false);
+
+      // Call onSave with the updated data
+      await onSave(updatedMetadata);
+    } catch (error) {
+      console.error("Error saving changes:", error);
+      setUploadStatus({
+        isUploading: false,
+        status: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to save changes. Please try again.",
+      });
+    }
   };
 
-  // If not connected, show wallet education or simplified dashboard
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-rose-50 to-teal-50 p-4">
-        <div className="max-w-4xl mx-auto">
-          {showEducation ? (
-            <Suspense fallback={<LoadingFallback />}>
-              <WalletEducation onBack={() => setShowEducation(false)} />
-            </Suspense>
-          ) : (
-            <div className="space-y-8">
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
-                <div className="flex justify-between items-center mb-6">
-                  <h1 className="text-xl sm:text-2xl font-['Lora'] text-gray-800/90">
-                    Connect Wallet
-                  </h1>
-                  <button
-                    onClick={onClose}
-                    className="p-2 text-gray-600 hover:text-gray-800 rounded-lg transition-colors"
-                  >
-                    <XMarkIcon className="w-5 h-5" />
-                  </button>
-                </div>
+  // Start loading photos when they are set
+  useEffect(() => {
+    if (photos.length > 0 && loadingState === "idle") {
+      loadNextBatch();
+    }
+  }, [photos, loadingState, loadNextBatch]);
 
-                <div className="space-y-6">
-                  <div className="bg-blue-50 rounded-lg p-6 text-center">
-                    <h3 className="text-lg font-semibold text-blue-900 mb-3">
-                      Connect Wallet to Edit
-                    </h3>
-                    <p className="text-blue-700 mb-4">
-                      To edit this gift, you&apos;ll need to connect your wallet
-                      and verify ownership.
-                    </p>
-                    <ConnectKitButton.Custom>
-                      {({ show }) => (
-                        <button
-                          onClick={show}
-                          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          Connect Wallet
-                        </button>
-                      )}
-                    </ConnectKitButton.Custom>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          {!showEducation && (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              onClick={() => setShowEducation(true)}
-              className="mt-4 w-full text-center text-blue-600 hover:text-blue-700 transition-colors"
-            >
-              Learn more about wallets →
-            </motion.button>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const handleDeleteGift = async () => {
+    try {
+      setUploadStatus({
+        isUploading: true,
+        status: "uploading",
+        message: "Deleting gift...",
+      });
+      await deleteGift();
+      setUploadStatus({
+        isUploading: false,
+        status: "ready",
+        message: "Gift deleted successfully",
+      });
+      setShowDeleteModal(false);
+      await onClose();
+    } catch (error) {
+      console.error("Error deleting gift:", error);
+      setUploadStatus({
+        isUploading: false,
+        status: "error",
+        message: "Failed to delete gift. Please try again.",
+      });
+    }
+  };
 
-  // If showing permissions dashboard
-  if (showPermissions) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-rose-50 to-teal-50 p-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Start preloading images while on permissions screen */}
-          {gift.photos?.map((photo) => (
-            <link
-              key={photo.ipfsHash}
-              rel="preload"
-              as="image"
-              href={`/api/pinata/image?cid=${photo.ipfsHash}`}
-            />
-          ))}
-          <Suspense fallback={<LoadingFallback />}>
-            <PermissionsDashboard
-              gift={gift}
-              userRole={userRole}
-              onBack={onClose}
-              onNext={() => setShowPermissions(false)}
-            />
-          </Suspense>
-        </div>
-      </div>
-    );
-  }
-
-  // If connected but no permissions, show no access state
-  if (isConnected && !userRole) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-rose-50 to-teal-50 p-4">
-        <div className="max-w-lg mx-auto">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg text-center">
-            <div className="mb-6">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
-                <ExclamationCircleIcon className="w-8 h-8 text-red-500" />
-              </div>
-              <h2 className="text-2xl font-semibold mb-2">No Edit Access</h2>
-              <p className="text-gray-600 mb-6">
-                You don&apos;t have permission to edit this gift. Only the owner
-                and invited editors can make changes.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <button
-                onClick={onClose}
-                className="w-full px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Back to Home
-              </button>
-              <p className="text-sm text-gray-500">
-                Want to create your own gift? You can start fresh from the home
-                page.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Main editing interface
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50 to-teal-50 p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-xl sm:text-2xl font-['Lora'] text-gray-800/90">
-              Edit Gift
-            </h1>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setShowPermissions(true)}
-                className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
-              >
-                <UserGroupIcon className="w-5 h-5" />
-                <span className="text-sm">Manage Access</span>
-              </button>
-              <button
-                onClick={onClose}
-                className="p-2 text-gray-600 hover:text-gray-800 rounded-lg transition-colors"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="border-b border-gray-200 mb-6">
-            <nav className="-mb-px flex space-x-8">
-              {[
-                {
-                  id: "messages" as const,
-                  name: "Messages",
-                  icon: PencilSquareIcon,
-                },
-                { id: "music" as const, name: "Music", icon: UserGroupIcon },
-                { id: "photos" as const, name: "Photos", icon: PhotoIcon },
-                {
-                  id: "preview" as const,
-                  name: "Preview",
-                  icon: UserGroupIcon,
-                },
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const hasChanges =
-                  tab.id === "preview" ? false : hasArrayChanges(tab.id);
-
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`${
-                      activeTab === tab.id
-                        ? "border-blue-500 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    } flex items-center px-1 py-4 border-b-2 font-medium text-sm relative`}
-                  >
-                    <Icon className="w-5 h-5 mr-2" />
-                    {tab.name}
-                    {hasChanges && (
-                      <span className="absolute top-2 right-0 h-2 w-2 bg-blue-500 rounded-full" />
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Tab Content */}
-          <div className="mt-6">
-            {activeTab === "photos" && (
-              <Suspense fallback={<LoadingFallback />}>
-                <PhotoUpload
-                  photos={stagedChanges.photos || []}
-                  onPhotosChange={(photos: Photo[]) => {
-                    setStagedChanges((prev: StagedChanges) => ({
-                      ...prev,
-                      photos: [
-                        ...(prev.photos?.filter((p: Photo) => p.isExisting) ||
-                          []),
-                        ...photos
-                          .filter((p: Photo) => !p.isExisting)
-                          .map((p: Photo) => ({
-                            ...p,
-                            isNew: true,
-                          })),
-                      ],
-                    }));
-                  }}
-                  customDates={Object.fromEntries(
-                    (stagedChanges.photos || []).map((photo: Photo) => [
-                      photo.file.name,
-                      photo.dateTaken,
-                    ])
-                  )}
-                  onCustomDatesChange={(dates: { [key: string]: string }) => {
-                    setStagedChanges((prev: StagedChanges) => ({
-                      ...prev,
-                      photos: prev.photos?.map((photo: Photo) => ({
-                        ...photo,
-                        dateTaken: dates[photo.file.name] || photo.dateTaken,
-                        isDateModified:
-                          dates[photo.file.name] !== photo.originalDate,
-                      })),
-                    }));
-                  }}
-                />
-              </Suspense>
-            )}
-            {activeTab === "messages" && (
-              <Suspense fallback={<LoadingFallback />}>
-                <MessageInput
-                  messages={stagedChanges.messages || []}
-                  onMessagesChange={(newMessages: string[]) => {
-                    setStagedChanges((prev) => ({
-                      ...prev,
-                      messages: newMessages,
-                    }));
-                  }}
-                />
-              </Suspense>
-            )}
-            {activeTab === "music" && (
-              <Suspense fallback={<LoadingFallback />}>
-                <MusicSelection
-                  selectedSongs={stagedChanges.music || []}
-                  onSongSelect={(newSongs: string[]) => {
-                    setStagedChanges((prev) => ({ ...prev, music: newSongs }));
-                  }}
-                />
-              </Suspense>
-            )}
-            {activeTab === "preview" && (
-              <div className="space-y-6">
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                    Review Changes
-                  </h3>
-                  <div className="space-y-4">
-                    {hasArrayChanges("photos") && (
-                      <div className="flex items-center text-blue-700">
-                        <CheckCircleIcon className="w-5 h-5 mr-2" />
-                        <span>
-                          {stagedChanges.photos?.length || 0} photos (
-                          {stagedChanges.photos?.filter((p) => p.isNew)
-                            .length || 0}{" "}
-                          new,{" "}
-                          {stagedChanges.photos?.filter((p) => p.isDateModified)
-                            .length || 0}{" "}
-                          dates modified)
-                        </span>
-                      </div>
-                    )}
-                    {stagedChanges.messages?.length !==
-                      gift.messages?.length && (
-                      <div className="flex items-center text-blue-700">
-                        <CheckCircleIcon className="w-5 h-5 mr-2" />
-                        <span>
-                          {stagedChanges.messages?.length || 0} messages
-                        </span>
-                      </div>
-                    )}
-                    {stagedChanges.music?.length !== gift.music?.length && (
-                      <div className="flex items-center text-blue-700">
-                        <CheckCircleIcon className="w-5 h-5 mr-2" />
-                        <span>{stagedChanges.music?.length || 0} songs</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex justify-end space-x-4">
-                  <button
-                    onClick={() => setStagedChanges({})}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                  >
-                    Discard Changes
-                  </button>
-                  <button
-                    onClick={handleSaveChanges}
-                    className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+    <div className="space-y-6">
+      {/* Header with actions */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-semibold">Edit Gift</h2>
+        <div className="flex gap-4">
+          {hasUnsavedChanges && (
+            <button
+              onClick={() => setShowChangesSummary(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-100 hover:bg-yellow-200 text-yellow-700"
+            >
+              <ExclamationCircleIcon className="h-5 w-5" />
+              View Changes
+            </button>
+          )}
+          <button
+            onClick={() => setIsPreviewMode(!isPreviewMode)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+          >
+            <SparklesIcon className="h-5 w-5" />
+            {isPreviewMode ? "Exit Preview" : "Preview"}
+          </button>
+          {userRole === "owner" && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700"
+            >
+              <XMarkIcon className="h-5 w-5" />
+              Delete Gift
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Changes Summary Modal */}
+      <BaseModal
+        isOpen={showChangesSummary}
+        onClose={() => setShowChangesSummary(false)}
+        title="Pending Changes"
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h4 className="font-medium">Photos</h4>
+            <ul className="text-sm text-gray-600 space-y-1">
+              {changesSummary.photos.added > 0 && (
+                <li className="text-green-600">
+                  • {changesSummary.photos.added} new photo(s) added
+                </li>
+              )}
+              {changesSummary.photos.modified > 0 && (
+                <li className="text-yellow-600">
+                  • {changesSummary.photos.modified} photo date(s) modified
+                </li>
+              )}
+              {changesSummary.photos.deleted > 0 && (
+                <li className="text-red-600">
+                  • {changesSummary.photos.deleted} photo(s) marked for deletion
+                </li>
+              )}
+            </ul>
+          </div>
+          {changesSummary.messages && (
+            <div>
+              <h4 className="font-medium">Messages</h4>
+              <p className="text-sm text-gray-600">• Message text updated</p>
+            </div>
+          )}
+          {changesSummary.music && (
+            <div>
+              <h4 className="font-medium">Music</h4>
+              <p className="text-sm text-gray-600">• Music selection changed</p>
+            </div>
+          )}
+          <div className="mt-4 text-sm text-gray-600">
+            <p>
+              These changes will be saved to IPFS when you click the &ldquo;Save
+              Changes&rdquo; button.
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={() => setShowChangesSummary(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </BaseModal>
+
+      {/* Delete confirmation modal */}
+      <BaseModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Gift"
+      >
+        <div className="space-y-4">
+          <p>
+            Are you sure you want to delete this gift? This action cannot be
+            undone.
+          </p>
+          <div className="flex justify-end gap-4">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteGift}
+              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete Gift
+            </button>
+          </div>
+        </div>
+      </BaseModal>
+
+      {/* Tabs */}
+      <Tab.Group>
+        <Tab.List className="flex space-x-1 rounded-xl bg-gray-100 p-1">
+          <Tab
+            className={({ selected }) =>
+              `w-full rounded-lg py-2.5 text-sm font-medium leading-5
+              ${
+                selected
+                  ? "bg-white text-gray-700 shadow"
+                  : "text-gray-500 hover:bg-white/[0.12] hover:text-gray-600"
+              }`
+            }
+          >
+            Photos
+          </Tab>
+          <Tab
+            className={({ selected }) =>
+              `w-full rounded-lg py-2.5 text-sm font-medium leading-5
+              ${
+                selected
+                  ? "bg-white text-gray-700 shadow"
+                  : "text-gray-500 hover:bg-white/[0.12] hover:text-gray-600"
+              }`
+            }
+          >
+            Message
+          </Tab>
+          <Tab
+            className={({ selected }) =>
+              `w-full rounded-lg py-2.5 text-sm font-medium leading-5
+              ${
+                selected
+                  ? "bg-white text-gray-700 shadow"
+                  : "text-gray-500 hover:bg-white/[0.12] hover:text-gray-600"
+              }`
+            }
+          >
+            Music
+          </Tab>
+        </Tab.List>
+        <Tab.Panels className="mt-2">
+          <Tab.Panel className="rounded-xl bg-white p-3">
+            <div className="space-y-4">
+              {skippedPhotos.length > 0 && (
+                <div className="p-4 rounded-lg bg-yellow-50 text-yellow-700">
+                  <p>
+                    {skippedPhotos.length} photo(s) were skipped due to size
+                    limitations. Please compress these photos and try again.
+                  </p>
+                </div>
+              )}
+              <EditPhotoUpload
+                photos={loadedPhotos}
+                onPhotosChange={handlePhotoChange}
+                isPreviewMode={isPreviewMode}
+                key={`photo-upload-${loadedPhotos.length}-${loadedPhotos.filter((p) => p.isDateModified).length}`}
+              />
+              {loadingState === "loading" && (
+                <div className="text-center text-gray-500">
+                  Loading photos...
+                </div>
+              )}
+              {loadingState === "error" && (
+                <div className="text-center text-red-500">
+                  Error loading photos. Please try again.
+                </div>
+              )}
+              {loadingState === "more-available" && (
+                <button
+                  onClick={loadNextBatch}
+                  className="w-full py-2 text-blue-600 hover:text-blue-700"
+                >
+                  Load more photos
+                </button>
+              )}
+            </div>
+          </Tab.Panel>
+          <Tab.Panel className="rounded-xl bg-white p-3">
+            <MessageInput
+              messages={messages}
+              onMessagesChange={setMessages}
+              maxMessages={5}
+              defaultMessages={gift.messages}
+              isPreviewMode={isPreviewMode}
+            />
+          </Tab.Panel>
+          <Tab.Panel className="rounded-xl bg-white p-3">
+            <MusicSelection
+              selectedSongs={music}
+              onSongSelect={setMusic}
+              isPreviewMode={isPreviewMode}
+            />
+          </Tab.Panel>
+        </Tab.Panels>
+      </Tab.Group>
+
+      {/* Save/Discard Changes */}
+      {hasUnsavedChanges && !isPreviewMode && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex justify-end gap-4">
+          <button
+            onClick={handleDiscardChanges}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+          >
+            Discard Changes
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <ArrowPathIcon className="h-5 w-5" />
+            Preview Changes
+          </button>
+        </div>
+      )}
+
+      {/* Confirm Changes in Preview Mode */}
+      {isPreviewMode && hasUnsavedChanges && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex justify-end gap-4">
+          <button
+            onClick={() => setIsPreviewMode(false)}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+          >
+            Continue Editing
+          </button>
+          <button
+            onClick={handleConfirmChanges}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+          >
+            <CheckCircleIcon className="h-5 w-5" />
+            Confirm & Save to IPFS
+          </button>
+        </div>
+      )}
+
+      {/* Upload Status Overlay */}
+      {uploadStatus.status !== "idle" && (
+        <UploadStatusOverlay
+          status={uploadStatus}
+          theme="space"
+          onDownload={() => {}}
+          onCopyId={() => {}}
+          onClose={() =>
+            setUploadStatus({ isUploading: false, status: "idle" })
+          }
+        />
+      )}
     </div>
   );
 }

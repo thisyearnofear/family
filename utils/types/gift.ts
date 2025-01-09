@@ -8,18 +8,19 @@ export interface Photo {
   isExisting: boolean;
   isNew: boolean;
   isDateModified: boolean;
+  isDeleted?: boolean;
   ipfsHash?: string;
 }
 
 export interface UploadStatus {
+  status: "idle" | "uploading" | "verifying" | "ready" | "error";
   isUploading: boolean;
-  status: "idle" | "uploading" | "verifying" | "ready" | "pending" | "error";
-  error?: string | null;
-  progress?: number;
+  message?: string;
+  error?: string;
   uploadedFiles?: number;
   totalFiles?: number;
-  giftId?: string | null;
-  message?: string;
+  giftId?: string;
+  ipfsHash?: string;
 }
 
 export interface CreateGiftData {

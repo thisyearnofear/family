@@ -6,6 +6,9 @@ import { useRouter } from "next/router";
 import { getImages } from "@utils/api/pinata";
 import type { ImageProps } from "@utils/types/types";
 import { SONGS } from "@utils/constants";
+import { InformationCircleIcon } from "@heroicons/react/24/solid";
+import { InfoModal } from "@components/shared/base/InfoModal";
+import type { Song } from "@utils/types/song";
 
 interface WelcomeScreenProps {
   onCreateGift: () => void;
@@ -21,7 +24,7 @@ interface WelcomeScreenProps {
 
 const SOCIALS = [
   {
-    icon: "/images/lens.svg",
+    icon: "/images/lens.png",
     href: "https://hey.xyz/u/papajams",
     alt: "Lens Profile",
   },
@@ -49,6 +52,7 @@ export default function WelcomeScreen({
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   const handleDemoSelect = async (theme: "space" | "japanese") => {
     try {
@@ -121,7 +125,7 @@ export default function WelcomeScreen({
         trimmedGiftId,
         data.theme as "space" | "japanese",
         data.messages,
-        data.music,
+        data.music?.map((song: Song) => song.path) || [],
         data.title
       );
     } catch (error) {
@@ -218,14 +222,23 @@ export default function WelcomeScreen({
             transition={{ duration: 0.8 }}
             className="relative z-10 max-w-md mx-auto flex flex-col"
           >
-            <div className="text-center mb-12">
+            <div className="text-center mb-8">
               <h1 className="text-5xl md:text-7xl font-['Playfair_Display'] text-gray-800/90 mb-4">
                 Famile.xyz
               </h1>
               <p className="text-base md:text-lg text-gray-600/90 max-w-sm mx-auto font-['Lora'] leading-relaxed">
-                Deepen bonds <br /> Treasure memories <br />
-                Share moments
+                meaning in memories
               </p>
+            </div>
+
+            <div className="flex justify-center mb-12">
+              <button
+                onClick={() => setShowInfoModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                aria-label="Learn more about Famile"
+              >
+                <InformationCircleIcon className="w-5 h-5" />
+              </button>
             </div>
 
             <div className="flex flex-row justify-center gap-4 mb-12">
@@ -237,9 +250,6 @@ export default function WelcomeScreen({
                 disabled={isLoading || loadingTheme !== null}
               >
                 <span className="block text-2xl mb-1">🚀</span>
-                <span className="block text-lg font-['Lora'] text-gray-800/90">
-                  Space Demo
-                </span>
               </motion.button>
 
               <motion.button
@@ -250,9 +260,6 @@ export default function WelcomeScreen({
                 disabled={isLoading || loadingTheme !== null}
               >
                 <span className="block text-2xl mb-1">🌳</span>
-                <span className="block text-lg font-['Lora'] text-gray-800/90">
-                  Zen Demo
-                </span>
               </motion.button>
             </div>
 
@@ -345,7 +352,7 @@ export default function WelcomeScreen({
               onClick={onCreateGift}
               className="w-full py-3 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors mb-12"
             >
-              Create New Gift
+              Create Gift
             </motion.button>
 
             {/* Social Icons */}
@@ -372,6 +379,11 @@ export default function WelcomeScreen({
           </motion.div>
         </div>
       </div>
+
+      <InfoModal
+        isOpen={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
+      />
     </>
   );
 }

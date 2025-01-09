@@ -1,3 +1,5 @@
+import { Chain } from "viem";
+
 export const SONGS = [
   { path: "/sounds/background-music.mp3", title: "Hopes and Dreams" },
   { path: "/sounds/grow-old.mp3", title: "Grow Old Together" },
@@ -70,3 +72,30 @@ export const FAMILE_INVITES_ABI = [
     ],
   },
 ] as const;
+
+export const LENS_CHAIN_ID = 37111;
+
+export const lensChain: Chain = {
+  id: LENS_CHAIN_ID,
+  name: "Lens Network Sepolia Testnet",
+  nativeCurrency: {
+    name: "GRASS",
+    symbol: "GRASS",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://rpc.testnet.lens.dev"],
+    },
+    public: {
+      http: ["https://rpc.testnet.lens.dev"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Lens Block Explorer",
+      url: "https://block-explorer.testnet.lens.dev",
+    },
+  },
+  testnet: true,
+};

@@ -30,6 +30,11 @@ import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { Message } from "@utils/types/message";
 import { Song } from "@utils/types/song";
 import { usePhotoStorage } from "@hooks/usePhotoStorage";
+import {
+  MAX_TOTAL_SIZE,
+  MAX_IMAGE_SIZE,
+  formatFileSize,
+} from "@utils/constants/upload";
 
 const STEPS: Step[] = [
   "theme",
@@ -58,8 +63,6 @@ interface MusicSelectionProps {
   selectedSongs: string[];
   onSongSelect: (songs: string[]) => void;
 }
-
-const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50MB total
 
 export default function CreateGiftFlow({
   onComplete,
@@ -233,16 +236,33 @@ export default function CreateGiftFlow({
 
   // Enhanced photo change handler
   const handlePhotosChange = useCallback((newPhotos: Photo[]) => {
+    // Check total size
     const newTotalSize = newPhotos.reduce(
       (sum, photo) => sum + photo.file.size,
       0
     );
     if (newTotalSize > MAX_TOTAL_SIZE) {
       alert(
-        `Cannot add more photos. Total size would exceed ${MAX_TOTAL_SIZE / 1024 / 1024}MB limit.`
+        `Cannot add more photos. Total size would exceed ${formatFileSize(MAX_TOTAL_SIZE)} limit.`
       );
       return;
     }
+
+    // Check individual photo sizes
+    const oversizedPhotos = newPhotos.filter(
+      (photo) => photo.file.size > MAX_IMAGE_SIZE
+    );
+    if (oversizedPhotos.length > 0) {
+      alert(
+        `Some photos exceed the ${formatFileSize(MAX_IMAGE_SIZE)} per-image limit:\n\n${oversizedPhotos
+          .map((p) => `${p.file.name} (${formatFileSize(p.file.size)})`)
+          .join(
+            "\n"
+          )}\n\nPlease choose smaller images or compress these before uploading.`
+      );
+      return;
+    }
+
     setPhotos(newPhotos);
   }, []);
 
@@ -317,7 +337,7 @@ export default function CreateGiftFlow({
           giftId || `gift-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         photos: uploadedPhotos.map((photo) => photo.ipfsHash),
         messages,
-        music: selectedSongs.map((song) => song.path),
+        music: selectedSongs,
         dateTaken: Object.values(customDates)[0] || new Date().toISOString(),
         createdAt: new Date().toISOString(),
         version: "1.0",
@@ -671,16 +691,27 @@ export default function CreateGiftFlow({
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold text-center">Upload Photos</h2>
 
-      {/* Size indicator */}
+      {/* Size limits info */}
       <div className="max-w-md mx-auto">
+        <div className="bg-blue-50 rounded-lg p-4 mb-4">
+          <h4 className="text-sm font-medium text-blue-900 mb-2">
+            Size Limits:
+          </h4>
+          <ul className="text-sm text-blue-800 space-y-1">
+            <li>• Maximum per photo: {formatFileSize(MAX_IMAGE_SIZE)}</li>
+            <li>• Total maximum: {formatFileSize(MAX_TOTAL_SIZE)}</li>
+          </ul>
+        </div>
+
+        {/* Total size indicator */}
         <div className="flex justify-between text-sm mb-2">
           <span className="text-gray-600">
-            Total Size: {(totalSize / 1024 / 1024).toFixed(1)}MB
+            Total Size: {formatFileSize(totalSize)}
           </span>
           <span
             className={`${sizePercentage > 90 ? "text-red-600" : "text-gray-600"}`}
           >
-            Limit: 50MB
+            Limit: {formatFileSize(MAX_TOTAL_SIZE)}
           </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -696,9 +727,35 @@ export default function CreateGiftFlow({
           />
         </div>
         {sizePercentage > 90 && (
-          <p className="text-sm text-red-600 mt-2">
-            Warning: Approaching size limit
+          <p className="text-sm text-red-600 mt-2 flex items-center gap-1">
+            <ExclamationCircleIcon className="w-4 h-4" />
+            <span>Warning: Approaching total size limit</span>
           </p>
+        )}
+
+        {/* Show warnings for any oversized images */}
+        {photos.some((photo) => photo.file.size > MAX_IMAGE_SIZE) && (
+          <div className="mt-4 bg-red-50 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-red-900 mb-2">
+              Oversized Images:
+            </h4>
+            <ul className="text-sm text-red-800 space-y-1">
+              {photos
+                .filter((photo) => photo.file.size > MAX_IMAGE_SIZE)
+                .map((photo) => (
+                  <li key={photo.file.name} className="flex items-center gap-2">
+                    <ExclamationCircleIcon className="w-4 h-4" />
+                    <span>
+                      {photo.file.name} ({formatFileSize(photo.file.size)})
+                    </span>
+                  </li>
+                ))}
+            </ul>
+            <p className="text-xs text-red-700 mt-2">
+              Please remove these images and upload smaller versions (under{" "}
+              {formatFileSize(MAX_IMAGE_SIZE)})
+            </p>
+          </div>
         )}
       </div>
 

@@ -9,17 +9,21 @@ import { useAudioPlayer } from "@hooks/useAudioPlayer";
 interface MusicSelectionProps {
   selectedSongs: string[];
   onSongSelect: (songs: string[]) => void;
+  isPreviewMode?: boolean;
 }
 
 export function MusicSelection({
   selectedSongs,
   onSongSelect,
+  isPreviewMode,
 }: MusicSelectionProps) {
   const { isPlaying, currentPlayingSong, togglePlaySong } = useAudioPlayer();
 
   return (
     <div className="space-y-4 text-center">
-      <h3 className="text-lg font-semibold">Select Music (Max 2)</h3>
+      <h3 className="text-lg font-semibold">
+        {isPreviewMode ? "Selected Music" : "Select Music (Max 2)"}
+      </h3>
       <p className="text-sm text-gray-600 mb-6">
         by{" "}
         <a
@@ -32,15 +36,18 @@ export function MusicSelection({
         </a>
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {SONGS.map((song) => (
+        {SONGS.filter((song) =>
+          isPreviewMode ? selectedSongs.includes(song.path) : true
+        ).map((song) => (
           <div
             key={song.path}
             className={`p-4 rounded-lg border ${
               selectedSongs.includes(song.path)
                 ? "border-blue-500 bg-blue-50"
                 : "border-gray-200"
-            } hover:border-blue-300 transition-colors cursor-pointer`}
+            } ${!isPreviewMode ? "hover:border-blue-300 transition-colors cursor-pointer" : ""}`}
             onClick={() => {
+              if (isPreviewMode) return;
               if (selectedSongs.includes(song.path)) {
                 onSongSelect(selectedSongs.filter((s) => s !== song.path));
               } else if (selectedSongs.length < 2) {
@@ -72,7 +79,7 @@ export function MusicSelection({
           </div>
         ))}
       </div>
-      {selectedSongs.length > 0 && (
+      {!isPreviewMode && selectedSongs.length > 0 && (
         <p className="text-sm text-gray-600">
           Selected: {selectedSongs.length}/2 songs
         </p>

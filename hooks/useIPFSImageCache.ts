@@ -1,102 +1,133 @@
-import { useState, useCallback, useEffect } from "react";
-import { UPLOAD_LIMITS } from "@utils/constants/upload";
+import { useEffect, useState } from "react";
+import { CACHE_AGE } from "@utils/constants/upload";
 
 interface CacheEntry {
-  url: string;
+  data: string;
   timestamp: number;
 }
 
-export function useIPFSImageCache() {
-  const [cache] = useState<Map<string, CacheEntry>>(new Map());
+const CACHE_KEY_PREFIX = "ipfs-image-";
 
-  // Preload a single image from IPFS
-  const preloadImage = useCallback(
-    async (ipfsHash: string): Promise<string> => {
-      const cached = cache.get(ipfsHash);
-      if (cached && Date.now() - cached.timestamp < UPLOAD_LIMITS.CACHE_AGE) {
-        return cached.url;
-      }
+// In-memory cache for faster access
+const memoryCache = new Map<string, CacheEntry>();
 
+export function useIPFSImageCache(ipfsHash: string | null) {
+  const [imageData, setImageData] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (!ipfsHash) {
+      setIsLoading(false);
+      return;
+    }
+
+    const cacheKey = `${CACHE_KEY_PREFIX}${ipfsHash}`;
+
+    async function loadImage() {
       try {
-        const response = await fetch(`https://ipfs.io/ipfs/${ipfsHash}`);
+        // Check memory cache first
+        const memoryCacheEntry = memoryCache.get(cacheKey);
+        if (
+          memoryCacheEntry &&
+          Date.now() - memoryCacheEntry.timestamp < CACHE_AGE
+        ) {
+          setImageData(memoryCacheEntry.data);
+          setIsLoading(false);
+          return;
+        }
+
+        // Check localStorage cache
+        const cachedData = localStorage.getItem(cacheKey);
+        if (cachedData) {
+          const { data, timestamp } = JSON.parse(cachedData);
+          if (Date.now() - timestamp < CACHE_AGE) {
+            // Update memory cache
+            memoryCache.set(cacheKey, { data, timestamp });
+            setImageData(data);
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // Fetch from API if not in cache or cache expired
+        const response = await fetch(`/api/pinata/image?cid=${ipfsHash}`);
         if (!response.ok) {
-          throw new Error(`Failed to fetch IPFS image: ${response.statusText}`);
+          throw new Error(`Failed to load image: ${response.statusText}`);
         }
 
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
+        const reader = new FileReader();
 
-        cache.set(ipfsHash, {
-          url,
-          timestamp: Date.now(),
-        });
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          const timestamp = Date.now();
 
-        return url;
-      } catch (error) {
-        console.error(`Error loading IPFS image ${ipfsHash}:`, error);
-        throw error;
-      }
-    },
-    [cache]
-  );
+          // Update memory cache
+          memoryCache.set(cacheKey, { data: base64data, timestamp });
 
-  // Preload multiple images from IPFS
-  const preloadImages = useCallback(
-    async (ipfsHashes: string[]): Promise<Map<string, string>> => {
-      const results = new Map<string, string>();
-
-      await Promise.all(
-        ipfsHashes.map(async (hash) => {
+          // Update localStorage cache
           try {
-            const url = await preloadImage(hash);
-            results.set(hash, url);
-          } catch (error) {
-            console.warn(`Failed to load image ${hash}:`, error);
-            // Don't fail the entire batch for one failed image
+            localStorage.setItem(
+              cacheKey,
+              JSON.stringify({ data: base64data, timestamp })
+            );
+          } catch (e) {
+            console.warn("Failed to cache image in localStorage:", e);
           }
-        })
-      );
 
-      return results;
-    },
-    [preloadImage]
-  );
+          setImageData(base64data);
+          setIsLoading(false);
+        };
 
-  // Clear expired cache entries
-  const clearExpiredCache = useCallback(() => {
-    const now = Date.now();
-    Array.from(cache.entries()).forEach(([hash, entry]) => {
-      if (now - entry.timestamp > UPLOAD_LIMITS.CACHE_AGE) {
-        URL.revokeObjectURL(entry.url);
-        cache.delete(hash);
+        reader.onerror = () => {
+          throw new Error("Failed to read image data");
+        };
+
+        reader.readAsDataURL(blob);
+      } catch (err) {
+        console.error("Error loading image:", err);
+        setError(err instanceof Error ? err : new Error("Unknown error"));
+        setIsLoading(false);
       }
-    });
-  }, [cache]);
+    }
 
-  // Clear entire cache
-  const clearCache = useCallback(() => {
-    Array.from(cache.values()).forEach((entry) => {
-      URL.revokeObjectURL(entry.url);
-    });
-    cache.clear();
-  }, [cache]);
+    loadImage();
 
-  // Periodically clear expired cache entries
-  useEffect(() => {
-    const interval = setInterval(
-      clearExpiredCache,
-      UPLOAD_LIMITS.CACHE_AGE / 2
-    );
+    // Clear expired cache entries periodically
+    const clearExpiredCache = () => {
+      const now = Date.now();
+      // Clear memory cache
+      memoryCache.forEach((value, key) => {
+        if (now - value.timestamp >= CACHE_AGE) {
+          memoryCache.delete(key);
+        }
+      });
+      // Clear localStorage cache
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(CACHE_KEY_PREFIX)) {
+          try {
+            const item = localStorage.getItem(key);
+            if (item) {
+              const { timestamp } = JSON.parse(item);
+              if (now - timestamp >= CACHE_AGE) {
+                localStorage.removeItem(key);
+              }
+            }
+          } catch (e) {
+            console.warn("Failed to parse cache entry:", e);
+          }
+        }
+      }
+    };
+
+    const interval = setInterval(clearExpiredCache, CACHE_AGE / 2);
+
     return () => {
       clearInterval(interval);
-      clearCache();
     };
-  }, [clearExpiredCache, clearCache]);
+  }, [ipfsHash]);
 
-  return {
-    preloadImage,
-    preloadImages,
-    clearCache,
-    clearExpiredCache,
-  };
+  return { imageData, isLoading, error };
 }

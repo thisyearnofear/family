@@ -109,6 +109,9 @@ export default async function handler(
         keyvalues: {
           type: "metadata",
           giftId: metadata.giftId,
+          title: metadata.title,
+          theme: metadata.theme,
+          music: JSON.stringify(metadata.music),
         },
       };
 

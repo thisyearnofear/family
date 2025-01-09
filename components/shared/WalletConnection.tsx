@@ -1,8 +1,7 @@
 import { ConnectKitButton } from "connectkit";
 import { useAccount } from "wagmi";
 import { useNameService } from "@hooks/useNameService";
-
-const LENS_TESTNET_ID = 37111;
+import { lensChain } from "@utils/constants/chains";
 
 interface WalletConnectionProps {
   onPrevious: () => void;
@@ -14,7 +13,7 @@ export function WalletConnection({
   onNext,
 }: WalletConnectionProps) {
   const { address, isConnected, chain } = useAccount();
-  const isCorrectNetwork = chain?.id === LENS_TESTNET_ID;
+  const isCorrectNetwork = chain?.id === lensChain.id;
   const { displayName } = useNameService(address);
 
   return (
@@ -42,7 +41,7 @@ export function WalletConnection({
       {isConnected && !isCorrectNetwork && (
         <div className="bg-yellow-50 p-4 rounded-lg">
           <p className="text-sm text-yellow-700">
-            Please switch to Lens Network to continue
+            Please switch to {lensChain.name} to continue
           </p>
         </div>
       )}

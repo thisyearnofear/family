@@ -5,6 +5,8 @@ interface MessageInputProps {
   onMessagesChange: (messages: string[]) => void;
   maxMessages?: number;
   defaultMessages?: string[];
+  isPreviewMode?: boolean;
+  previewMessage?: string;
 }
 
 export function MessageInput({
@@ -17,7 +19,28 @@ export function MessageInput({
     "Connection transcends distance, time, space: stars bound-unbreakable constellation.",
     "Love is infinite. Happiness innate. Seeing, believing ....",
   ],
+  isPreviewMode,
+  previewMessage,
 }: MessageInputProps) {
+  if (isPreviewMode) {
+    const messagesToShow = messages.length > 0 ? messages : defaultMessages;
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-center">Message Preview</h3>
+        <div className="space-y-4">
+          {messagesToShow.map((message, index) => (
+            <div
+              key={index}
+              className="prose max-w-none p-6 bg-gray-50 rounded-lg transition-all hover:bg-gray-100"
+            >
+              <div className="whitespace-pre-wrap">{message}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-center">Add Messages</h3>
@@ -37,7 +60,7 @@ export function MessageInput({
               onMessagesChange(newMessages);
             }}
             className="flex-1 p-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            rows={2}
+            rows={4}
             placeholder={defaultMessages[index % defaultMessages.length]}
           />
           <button
